@@ -1,0 +1,1316 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>بيانات محكمة القفر الابتدائية</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet" />
+  <script src="cordova.js"></script>
+  <style>
+    /* ===== RESET & BASE ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --primary:       #6366F1;
+      --primary-dark:  #4F46E5;
+      --primary-light: #818CF8;
+      --accent:        #EC4899;
+      --accent2:       #F59E0B;
+      --success:       #10B981;
+      --warning:       #F59E0B;
+      --danger:        #EF4444;
+      --bg:            #F8FAFC;
+      --surface:       #FFFFFF;
+      --surface2:      #F1F5F9;
+      --card:          #FFFFFF;
+      --card-hover:    #F8FAFC;
+      --text:          #1E293B;
+      --text-muted:    #64748B;
+      --text-sub:      #94A3B8;
+      --border:        #E2E8F0;
+      --border-glow:   #CBD5E1;
+      --shadow:        0 4px 20px rgba(99,102,241,0.1);
+      --shadow-card:   0 2px 12px rgba(99,102,241,0.08);
+      --radius:        16px;
+      --radius-sm:     12px;
+      --radius-xs:     8px;
+      --transition:    0.3s cubic-bezier(.4,0,.2,1);
+      --font:          'Cairo', 'Tajawal', 'Segoe UI', Tahoma, Arial, sans-serif;
+    }
+    /* تحسينات البحث الاحترافية */
+    .search-result-item { 
+        border-right: 6px solid var(--accent) !important; 
+        margin-bottom: 18px !important; 
+        background: linear-gradient(to left, rgba(99,102,241,0.08), transparent) !important; 
+        border-radius: 12px !important; 
+        padding: 15px !important; 
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important; 
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05) !important;
+        position: relative !important;
+        overflow: hidden !important;
+    }
+    .search-result-item:hover { 
+        transform: scale(1.02) translateX(-5px) !important; 
+        box-shadow: 0 8px 25px rgba(99,102,241,0.15) !important; 
+        background: linear-gradient(to left, rgba(99,102,241,0.12), rgba(99,102,241,0.02)) !important; 
+    }
+    .search-result-item::before {
+        content: '🔍 نتيجة بحث';
+        position: absolute;
+        top: 5px;
+        left: 10px;
+        font-size: 10px;
+        font-weight: bold;
+        color: var(--accent);
+        opacity: 0.7;
+    }
+    .search-highlight { 
+        background: #FFD600 !important; 
+        color: #000 !important; 
+        padding: 2px 6px !important; 
+        border-radius: 6px !important; 
+        font-weight: 900 !important; 
+        box-shadow: 0 2px 8px rgba(255,214,0,0.4) !important; 
+        display: inline-block !important;
+        animation: pulseHighlight 2s infinite;
+    }
+    @keyframes pulseHighlight {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+    @keyframes slideInUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    /* ضمان ظهور نتائج البحث بشكل بارز */
+    .search-result-item .judgment-title { 
+        color: var(--primary-dark) !important; 
+        font-weight: 900 !important;
+        font-size: 1.2em !important;
+    }
+    .search-result-item .judgment-description {
+        color: var(--text) !important;
+        line-height: 1.6 !important;
+    }
+    /* تحسينات عرض الملف الاحترافية */
+    .viewer-modal { 
+        backdrop-filter: blur(15px) !important;
+        background: rgba(15, 23, 42, 0.8) !important;
+    }
+    .viewer-header { 
+        background: linear-gradient(90deg, var(--primary-dark) 0%, var(--primary) 100%) !important; 
+        border-bottom: 2px solid rgba(255,255,255,0.1) !important;
+    }
+    .viewer-title { 
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;
+        font-family: 'Tajawal', sans-serif !important;
+    }
+    .viewer-btn-close {
+        background: #EF4444 !important;
+        box-shadow: 0 4px 10px rgba(239,68,68,0.3) !important;
+    }
+    /* تحسينات عرض الملف */
+    .viewer-modal { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); opacity: 0; transform: scale(0.9); pointer-events: none; }
+    .viewer-modal.active { opacity: 1; transform: scale(1); pointer-events: auto; }
+    .viewer-header { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; display: flex; justify-content: space-between; align-items: center; padding: 18px 25px; border-radius: 24px 24px 0 0; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+    .viewer-title { font-weight: 900; font-size: 18px; letter-spacing: 0.5px; }
+    .viewer-btn-close { background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px 16px; border-radius: 12px; font-weight: bold; cursor: pointer; transition: all 0.3s ease; backdrop-filter: blur(5px); }
+    .viewer-btn-close:hover { background: rgba(255,255,255,0.3); transform: scale(1.05); }
+    .viewer-header-extended { gap: 16px; flex-wrap: wrap; }
+    .viewer-heading-group { display: flex; flex-direction: column; gap: 4px; min-width: 180px; }
+    .viewer-subtitle { font-size: 12px; opacity: 0.92; font-weight: 600; }
+    .viewer-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    .viewer-action-btn { background: rgba(255,255,255,0.14); color: white; border: 1px solid rgba(255,255,255,0.18); padding: 9px 14px; border-radius: 12px; font-family: var(--font); font-weight: 800; cursor: pointer; transition: all 0.2s ease; backdrop-filter: blur(8px); }
+    .viewer-action-btn:hover { background: rgba(255,255,255,0.22); transform: translateY(-1px); }
+    .viewer-action-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+    .viewer-action-primary { background: rgba(16,185,129,0.22); border-color: rgba(16,185,129,0.28); }
+    .viewer-content { background: #f0f0f0; height: calc(100% - 60px); }
+    .viewer-content-enhanced { background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%); }
+    #pdfFrame { border: none; width: 100%; height: 100%; }
+    @media (max-width: 768px) {
+      .viewer-header-extended { padding: 14px 16px !important; }
+      .viewer-toolbar { width: 100%; justify-content: stretch; }
+      .viewer-action-btn, .viewer-btn-close { flex: 1 1 calc(50% - 8px); text-align: center; }
+      .viewer-heading-group { width: 100%; }
+    }
+    @media (max-width: 768px) {
+      .header-top { flex-direction: column; align-items: stretch; }
+      .header-controls { justify-content: space-between; }
+      .header-actions-row { align-items: stretch; }
+      .search-toolbar { flex: 1 1 100%; }
+      .settings-container { width: 100%; }
+      .main-btn { width: 100%; justify-content: center; }
+      .dropdown-panel { width: 100%; max-width: 100%; }
+    }
+    @media (max-width: 520px) {
+      .search-toolbar { gap: 8px; }
+      .search-box-compact input { height: 38px; font-size: 12px; padding-inline: 12px 34px; }
+      .tab-btn { min-width: 132px; min-height: 56px; padding: 8px 10px; }
+      .tab-icon { width: 30px; height: 30px; font-size: 16px; border-radius: 11px; }
+      .tab-count-badge { min-width: 26px; height: 22px; padding: 0 7px; font-size: 11px; }
+    }
+    html.dark-mode {
+      --bg:            #0F172A;
+      --surface:       #1E293B;
+      --surface2:      #334155;
+      --card:          #1E293B;
+      --card-hover:    #334155;
+      --text:          #F1F5F9;
+      --text-muted:    #CBD5E1;
+      --text-sub:      #94A3B8;
+      --border:        #334155;
+      --border-glow:   #475569;
+      --shadow:        0 4px 20px rgba(0,0,0,0.3);
+      --shadow-card:   0 2px 12px rgba(0,0,0,0.2);
+    }
+    html, body { height: 100%; font-family: var(--font); background: var(--bg); color: var(--text); overflow: hidden; -webkit-font-smoothing: antialiased; transition: background-color 0.3s ease, color 0.3s ease; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--surface2); border-radius: 10px; }
+    ::-webkit-scrollbar-thumb { background: linear-gradient(var(--primary), var(--accent)); border-radius: 10px; }
+    #app { display: none; height: 100vh; min-height: 0; flex-direction: column; }
+    #sourceEditableRoot { flex: 1; min-height: 0; height: 100%; display: flex; flex-direction: column; }
+    .tabs-nav { -webkit-overflow-scrolling: touch; touch-action: pan-x; }
+    .main-content { flex: 1 1 auto; min-height: 0; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y; }
+    .header { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%); color: white; padding: 12px 20px 10px; box-shadow: var(--shadow); flex-shrink: 0; position: relative; }
+    .header-content { max-width: 1560px; margin: 0 auto; }
+    .header-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 6px; gap: 12px; }
+    .header-logo { display: flex; align-items: center; gap: 12px; }
+    .logo-icon { width: 48px; height: 48px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 28px; backdrop-filter: blur(10px); }
+    .logo-text h1 { font-size: 22px; font-weight: 900; margin: 0; line-height: 1.2; }
+    .logo-text p { font-size: 11px; opacity: 0.9; margin: 2px 0 0 0; }
+    .header-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+    .connection-status { font-size: 11px; padding: 4px 8px; border-radius: 20px; background: rgba(255,255,255,0.2); color: white; display: flex; align-items: center; gap: 4px; }
+    .connection-status.offline { background: var(--danger); }
+    .current-user-info { font-size: 12px; padding: 4px 10px; border-radius: 20px; background: rgba(255,255,255,0.15); color: white; display: flex; align-items: center; gap: 4px; font-weight: 700; }
+    .header-actions-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 4px; }
+    .search-toolbar { display: flex; align-items: center; gap: 10px; flex: 1 1 520px; min-width: 0; }
+    .search-box-compact { position: relative; flex: 1 1 0; min-width: 0; }
+    .search-box-compact input { width: 100%; height: 40px; padding: 9px 38px 9px 14px; border: none; border-radius: 14px; background: rgba(255,255,255,0.16); color: white; font-family: var(--font); font-size: 13px; font-weight: 700; outline: none; transition: background var(--transition), transform var(--transition), box-shadow var(--transition); backdrop-filter: blur(10px); }
+    .search-box-compact input::placeholder { color: rgba(255,255,255,0.7); }
+    .search-box-compact input:focus { background: rgba(255,255,255,0.24); box-shadow: 0 10px 24px rgba(15,23,42,0.18); transform: translateY(-1px); }
+    .search-box-compact .search-icon { left: 12px; font-size: 15px; opacity: 0.95; }
+    .search-box-global input { border: 1px solid rgba(255,255,255,0.08); }
+    .search-submit-btn { height: 40px; min-width: 102px; border: none; border-radius: 14px; padding: 0 18px; background: linear-gradient(135deg, #0ea5e9, #2563eb); color: #fff; font-family: var(--font); font-size: 13px; font-weight: 900; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 7px; box-shadow: 0 10px 22px rgba(14,165,233,0.24); transition: transform var(--transition), box-shadow var(--transition), opacity var(--transition); white-space: nowrap; }
+    .search-submit-btn:hover { transform: translateY(-1px); box-shadow: 0 14px 28px rgba(14,165,233,0.3); }
+    .search-submit-btn:active { transform: scale(0.98); }
+    .search-submit-btn:disabled { opacity: 0.55; cursor: not-allowed; box-shadow: none; }
+    .header-controls .sync-btn,
+    .header-controls .admin-btn,
+    .header-controls .theme-toggle,
+    .header-controls .logout-btn { display: none !important; }
+
+    .settings-container { position: relative; flex: 0 0 auto; z-index: 1000; }
+    .main-btn { background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%); color: white; border: none; padding: 10px 18px; border-radius: 14px; font-size: 14px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 10px; box-shadow: 0 10px 25px rgba(58, 123, 213, 0.28); transition: 0.3s ease; font-family: var(--font); }
+    .main-btn:active { transform: scale(0.96); }
+    .dropdown-panel { visibility: hidden; opacity: 0; position: absolute; top: 54px; inset-inline-end: 0; width: max-content; min-width: 220px; max-width: min(92vw, 320px); background: linear-gradient(160deg, #1e3c72 0%, #1a2a6c 100%); backdrop-filter: blur(20px); border-radius: 20px; padding: 12px; box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4); border: 1px solid rgba(255,255,255,0.15); transform: translateY(15px); transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1); }
+    .dropdown-panel.active { visibility: visible; opacity: 1; transform: translateY(0); }
+    .menu-clock { text-align: center; font-size: 12px; color: #00d2ff; margin-bottom: 8px; font-weight: 900; opacity: 0.95; }
+    .menu-header { font-size: 10px; color: rgba(255, 255, 255, 0.42); padding: 5px 10px; text-transform: uppercase; border-bottom: 1px solid rgba(255, 255, 255, 0.1); margin-bottom: 8px; white-space: nowrap; }
+    .menu-item { display: flex; align-items: center; padding: 10px 15px; color: #f5f6fa; text-decoration: none; border-radius: 12px; margin-bottom: 3px; transition: 0.3s; white-space: nowrap; font-size: 13px; font-weight: 800; }
+    .menu-item:hover { background: rgba(255, 255, 255, 0.1); padding-inline-start: 20px; }
+    .menu-item[hidden] { display: none !important; }
+    .icon-dot { width: 7px; height: 7px; border-radius: 50%; background: #00d2ff; margin-inline-start: 12px; box-shadow: 0 0 8px #00d2ff; flex-shrink: 0; }
+    .divider { height: 1px; background: rgba(255, 255, 255, 0.1); margin: 8px 5px; }
+    .logout-item { color: #ff4b2b; font-weight: 900; }
+    .logout-item:hover { background: rgba(255, 75, 43, 0.12) !important; }
+
+    /* Login Screen Styles */
+    #loginScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #2563eb, #1e40af); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; }
+    .login-card { background: white; width: 100%; max-width: 400px; padding: 40px 30px; border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); text-align: center; animation: slideUp 0.5s ease-out; }
+    @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .login-logo { width: 80px; height: 80px; background: #2563eb; color: white; border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 40px; margin: 0 auto 20px; box-shadow: 0 10px 20px rgba(37,99,235,0.3); }
+    .login-card h2 { font-size: 24px; font-weight: 900; color: #1e293b; margin-bottom: 8px; }
+    .login-card p { color: #64748b; font-size: 14px; margin-bottom: 30px; }
+    .login-field { position: relative; margin-bottom: 20px; text-align: right; }
+    .login-field label { display: block; font-size: 13px; font-weight: 700; color: #64748b; margin-bottom: 8px; padding-right: 4px; }
+    .login-field input { width: 100%; padding: 14px 16px; border: 2px solid #e2e8f0; border-radius: 12px; font-family: 'Tajawal', sans-serif; font-size: 16px; outline: none; transition: all 0.3s ease; background: #f8fafc; color: #1e293b; box-sizing: border-box; text-align: center; }
+    .login-field input:focus { border-color: #2563eb; box-shadow: 0 0 0 4px rgba(37,99,235,0.1); background: white; }
+    .login-btn { width: 100%; padding: 16px; background: #2563eb; color: white; border: none; border-radius: 12px; font-family: 'Tajawal', sans-serif; font-weight: 900; font-size: 16px; cursor: pointer; transition: all 0.3s ease; margin-top: 10px; box-shadow: 0 4px 12px rgba(37,99,235,0.2); }
+    .login-btn:active { transform: scale(0.98); }
+    .login-error { color: #ef4444; font-size: 13px; font-weight: 700; margin-top: 15px; display: none; }
+    @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }
+
+    /* Header Buttons */
+    .theme-toggle { background: rgba(255,255,255,0.2); border: none; color: white; width: 38px; height: 38px; border-radius: 10px; cursor: pointer; font-size: 18px; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; }
+    .theme-toggle:hover { background: rgba(255,255,255,0.3); transform: scale(1.05); }
+    .admin-btn { background: rgba(255,255,255,0.2); border: none; color: white; padding: 6px 12px; height: 38px; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 700; font-family: var(--font); transition: all 0.3s ease; display: flex; align-items: center; gap: 6px; }
+    .admin-btn:hover { background: rgba(255,255,255,0.35); }
+    .sync-btn { background: rgba(14,165,233,0.22); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 6px 12px; height: 38px; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 800; font-family: var(--font); transition: all 0.3s ease; display: flex; align-items: center; gap: 6px; }
+    .sync-btn:hover { background: rgba(14,165,233,0.36); }
+    .sync-btn:disabled, .sync-btn.is-loading { opacity: 0.75; cursor: wait; }
+    .logout-btn { background: rgba(239,68,68,0.8); border: none; color: white; padding: 6px 12px; height: 38px; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 700; font-family: var(--font); transition: all 0.3s ease; display: flex; align-items: center; gap: 6px; }
+    .logout-btn:hover { background: rgba(239,68,68,1); }
+
+    /* Header Search */
+    .header-search { position: relative; margin-top: 8px; }
+    .header-search input { width: 100%; padding: 10px 40px 10px 16px; border: none; border-radius: 50px; background: rgba(255,255,255,0.15); color: white; font-family: var(--font); font-size: 14px; outline: none; transition: background var(--transition); backdrop-filter: blur(10px); }
+    .header-search input::placeholder { color: rgba(255,255,255,0.6); }
+    .header-search input:focus { background: rgba(255,255,255,0.25); }
+    .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 16px; }
+
+    /* Tabs */
+    .tabs-nav { display: flex; gap: 6px; background: linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(241,245,249,0.96) 100%); border-bottom: 1px solid var(--border); flex-shrink: 0; overflow-x: auto; padding: 8px 10px 10px; scrollbar-width: thin; scrollbar-color: var(--primary-light) transparent; scroll-behavior: smooth; box-shadow: inset 0 -1px 0 rgba(148,163,184,0.18); }
+    .tabs-nav::-webkit-scrollbar { height: 8px; }
+    .tabs-nav::-webkit-scrollbar-thumb { background: linear-gradient(135deg, var(--primary-light), var(--primary)); border-radius: 999px; }
+    .tabs-nav::-webkit-scrollbar-track { background: transparent; }
+    .tab-btn { flex: 0 0 auto; min-width: 156px; min-height: 58px; padding: 8px 12px; border: 1px solid rgba(99,102,241,0.14); border-radius: 18px; background: linear-gradient(145deg, rgba(255,255,255,0.98), rgba(241,245,249,0.92)); font-family: var(--font); font-weight: 900; font-size: 12px; color: var(--text); cursor: pointer; transition: all 0.3s ease; position: relative; display: inline-flex; flex-direction: row; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; text-align: center; box-shadow: 0 8px 22px rgba(99,102,241,0.08), inset 0 1px 0 rgba(255,255,255,0.85); }
+    .tab-btn:hover { color: var(--primary-dark); border-color: rgba(99,102,241,0.28); background: linear-gradient(145deg, rgba(255,255,255,1), rgba(224,231,255,0.95)); transform: translateY(-3px) scale(1.01); box-shadow: 0 16px 28px rgba(99,102,241,0.16); }
+    .tab-btn.active { color: #fff; background: linear-gradient(135deg, #4F46E5 0%, #6366F1 52%, #60A5FA 100%); border-color: rgba(79,70,229,0.36); box-shadow: 0 18px 32px rgba(79,70,229,0.28); }
+    .tab-btn.active::after { content: ''; position: absolute; inset-inline: 20px; bottom: 8px; height: 3px; background: linear-gradient(135deg, rgba(255,255,255,0.98), rgba(255,255,255,0.65)); border-radius: 999px; }
+    .tab-admin-cluster { display: flex; gap: 4px; align-items: stretch; flex: 0 0 auto; }
+    .tab-label-text { display: inline-flex; align-items: center; justify-content: center; gap: 4px; line-height: 1.2; max-width: 100%; white-space: nowrap; word-break: keep-all; }
+    .tab-icon { width: 34px; height: 34px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; font-size: 18px; background: rgba(99,102,241,0.08); color: var(--primary-dark); box-shadow: inset 0 0 0 1px rgba(99,102,241,0.10); }
+    .tab-btn.active .tab-icon { background: rgba(255,255,255,0.18); color: #fff; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.16); }
+    .tab-count-badge { min-width: 28px; height: 22px; padding: 0 8px; border-radius: 999px; background: rgba(99,102,241,0.10); color: var(--primary-dark); font-size: 11px; font-weight: 900; display: inline-flex; align-items: center; justify-content: center; box-shadow: inset 0 0 0 1px rgba(99,102,241,0.10); }
+    .tab-btn.active .tab-count-badge { background: rgba(255,255,255,0.20); color: #fff; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.16); }
+    .search-screen { display: none; flex: 1 1 auto; min-height: 0; background: linear-gradient(180deg, rgba(248,250,252,0.98) 0%, rgba(241,245,249,0.98) 100%); padding: 16px; overflow-y: auto; }
+    .search-screen.active { display: block; }
+    .search-screen-card { max-width: 1560px; margin: 0 auto; background: var(--surface); border: 1px solid var(--border); border-radius: 24px; box-shadow: var(--shadow); padding: 20px; }
+    .search-screen-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
+    .search-screen-title { font-size: 22px; font-weight: 900; color: var(--text); margin-bottom: 6px; }
+    .search-screen-subtitle { color: var(--text-muted); font-size: 13px; line-height: 1.7; }
+    .search-screen-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .search-screen-btn { border: none; border-radius: 14px; padding: 10px 16px; font-family: var(--font); font-size: 13px; font-weight: 900; cursor: pointer; transition: transform var(--transition), box-shadow var(--transition); }
+    .search-screen-btn:hover { transform: translateY(-1px); }
+    .search-screen-btn.primary { background: linear-gradient(135deg, #4f46e5, #2563eb); color: #fff; box-shadow: 0 10px 22px rgba(79,70,229,0.22); }
+    .search-screen-btn.secondary { background: rgba(99,102,241,0.08); color: var(--primary-dark); }
+    .search-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 18px; }
+    .search-summary-card { background: linear-gradient(145deg, rgba(255,255,255,0.98), rgba(238,242,255,0.9)); border: 1px solid rgba(99,102,241,0.12); border-radius: 18px; padding: 14px 16px; }
+    .search-summary-label { color: var(--text-muted); font-size: 12px; font-weight: 800; margin-bottom: 6px; }
+    .search-summary-value { color: var(--primary-dark); font-size: 22px; font-weight: 900; }
+    .search-summary-breakdown { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+    .search-summary-chip { display: inline-flex; align-items: center; gap: 6px; background: rgba(99,102,241,0.08); color: var(--primary-dark); padding: 8px 12px; border-radius: 999px; font-size: 12px; font-weight: 800; }
+    .search-results-groups { display: flex; flex-direction: column; gap: 16px; }
+    .search-tab-group { border: 1px solid rgba(99,102,241,0.12); border-radius: 20px; background: rgba(255,255,255,0.88); overflow: hidden; }
+    .search-tab-group-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; background: linear-gradient(135deg, rgba(99,102,241,0.08), rgba(14,165,233,0.08)); border-bottom: 1px solid rgba(99,102,241,0.08); }
+    .search-tab-group-title { font-size: 16px; font-weight: 900; color: var(--text); }
+    .search-tab-group-count { color: var(--primary-dark); font-size: 12px; font-weight: 900; }
+    .search-tab-group-body { padding: 14px; }
+    .search-result-item { cursor: pointer; }
+    .search-result-meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+    .search-result-pill { display: inline-flex; align-items: center; gap: 4px; background: rgba(79,70,229,0.08); color: var(--primary-dark); padding: 6px 10px; border-radius: 999px; font-size: 11px; font-weight: 900; }
+    .search-empty-state { text-align: center; padding: 30px 14px; color: var(--text-muted); }
+    .search-empty-state strong { display: block; font-size: 18px; color: var(--text); margin-bottom: 8px; }
+    .search-result-focus { animation: searchFocusPulse 2s ease; box-shadow: 0 0 0 3px rgba(99,102,241,0.20), 0 18px 30px rgba(79,70,229,0.18) !important; }
+    @keyframes searchFocusPulse { 0% { transform: scale(1); } 35% { transform: scale(1.015); } 100% { transform: scale(1); } }
+    .tab-settings-trigger { flex: 0 0 auto; min-width: 52px; width: 52px; border: 1px dashed rgba(99,102,241,0.35); border-radius: 18px; background: rgba(99,102,241,0.06); color: var(--primary); font-family: var(--font); font-size: 17px; font-weight: 900; cursor: pointer; transition: all 0.2s ease; align-items: center; justify-content: center; box-shadow: 0 8px 18px rgba(99,102,241,0.08); }
+    .tab-settings-trigger:hover { background: rgba(99,102,241,0.12); transform: translateY(-1px); }
+    .tab-upload-cluster { display: flex; gap: 4px; align-items: stretch; flex: 0 0 auto; }
+    .tab-upload-trigger { flex: 0 0 auto; padding: 0 12px; min-width: 108px; border: 1px dashed rgba(16,185,129,0.36); border-radius: 18px; background: linear-gradient(135deg, rgba(236,253,245,0.96), rgba(219,234,254,0.94)); color: #047857; font-family: var(--font); font-size: 13px; font-weight: 900; cursor: pointer; transition: all 0.2s ease; display: none; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 10px 20px rgba(16,185,129,0.08), inset 0 0 0 1px rgba(16,185,129,0.05); white-space: nowrap; }
+    .tab-upload-trigger:hover { background: linear-gradient(135deg, rgba(16,185,129,0.18), rgba(14,165,233,0.16)); transform: translateY(-2px); box-shadow: 0 18px 28px rgba(16,185,129,0.14); }
+    .tab-upload-trigger:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
+    #tabSettingsPanel { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 3100; display: none; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px); }
+    #tabSettingsPanel.active { display: flex; }
+    .tab-settings-card { background: var(--surface); border-radius: var(--radius); width: 100%; max-width: 760px; box-shadow: 0 24px 60px rgba(0,0,0,0.35); overflow: hidden; max-height: 88vh; display: flex; flex-direction: column; }
+    .tab-settings-header { background: linear-gradient(135deg, #2563EB, #4F46E5); color: white; padding: 18px 22px; display: flex; align-items: center; justify-content: space-between; }
+    .tab-settings-header h2 { margin: 0; font-size: 19px; font-weight: 900; }
+    .tab-settings-close { background: rgba(255,255,255,0.18); border: none; color: white; width: 38px; height: 38px; border-radius: 50%; font-size: 18px; cursor: pointer; }
+    .tab-settings-body { padding: 22px; overflow-y: auto; }
+    .tab-settings-note { background: rgba(37,99,235,0.08); border: 1px solid rgba(37,99,235,0.16); color: var(--text); border-radius: 12px; padding: 12px 14px; font-size: 13px; font-weight: 700; margin-bottom: 18px; line-height: 1.8; }
+    .tab-settings-grid { display: flex; flex-direction: column; gap: 14px; }
+    .tab-settings-row { display: grid; grid-template-columns: 52px 1fr; gap: 12px; align-items: stretch; background: var(--surface2); border: 1px solid var(--border); border-radius: 14px; padding: 14px; }
+    .tab-settings-badge { width: 52px; min-height: 52px; border-radius: 14px; background: linear-gradient(135deg, rgba(99,102,241,0.12), rgba(14,165,233,0.12)); display: flex; align-items: center; justify-content: center; font-size: 24px; }
+    .tab-settings-fields { display: grid; gap: 8px; }
+    .tab-settings-fields label { font-size: 13px; font-weight: 800; color: var(--text-muted); }
+    .tab-settings-fields input { width: 100%; padding: 12px 14px; border: 2px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text); font-family: var(--font); font-size: 14px; box-sizing: border-box; outline: none; }
+    .tab-settings-fields input:focus { border-color: var(--primary); }
+    body.restricted-user-mode #tabSettingsBtn,
+    body.restricted-user-mode #tabSettingsPanel,
+    body.restricted-user-mode #permissionSyncBtn,
+    body.restricted-user-mode #fullSyncBtn,
+    body.restricted-user-mode #serverConfigEditorBtn,
+    body.restricted-user-mode #serverConfigEditorPanel,
+    body.restricted-user-mode #sourceCodeEditorBtn,
+    body.restricted-user-mode #sourceCodeEditorPanel,
+    body.restricted-user-mode .tab-upload-trigger { display: none !important; }
+
+    /* Main Content */
+    .main-content { flex: 1; overflow-y: auto; padding: 24px 20px; background: var(--bg); display: none; }
+    .main-content.active { display: block; }
+    .content-wrapper { max-width: 1560px; margin: 0 auto; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow-card); transition: all var(--transition); }
+    .stat-card:hover { transform: translateY(-4px); box-shadow: var(--shadow); border-color: var(--primary); }
+    .stat-label { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; font-weight: 500; }
+    .stat-value { font-size: 28px; font-weight: 900; background: linear-gradient(135deg, var(--primary), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .court-info { background: linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%); border: 2px solid #0EA5E9; border-radius: var(--radius); padding: 24px; margin-bottom: 32px; box-shadow: 0 2px 8px rgba(14,165,233,0.1); }
+    html.dark-mode .court-info { background: linear-gradient(135deg, #1E3A4C 0%, #2D5A7B 100%); border-color: #0EA5E9; }
+    .court-info h2 { color: #0369A1; font-size: 20px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    html.dark-mode .court-info h2 { color: #38BDF8; }
+    .court-info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin-top: 16px; }
+    .court-info-item { background: white; padding: 12px; border-radius: var(--radius-sm); border-right: 4px solid #0EA5E9; }
+    html.dark-mode .court-info-item { background: #334155; border-right-color: #0EA5E9; }
+    .court-info-label { font-size: 12px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-bottom: 4px; }
+    .court-info-value { font-size: 15px; color: var(--text); font-weight: 600; }
+    .filters-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 32px; box-shadow: var(--shadow-card); }
+    .filters-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .filters-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+    .filter-btn { background: var(--surface2); border: 2px solid var(--border); border-radius: var(--radius-sm); padding: 10px 14px; cursor: pointer; font-family: var(--font); font-size: 13px; font-weight: 600; color: var(--text-muted); transition: all var(--transition); text-align: center; }
+    .filter-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--surface); }
+    .filter-btn.active { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; border-color: var(--primary); box-shadow: 0 4px 12px rgba(99,102,241,0.3); }
+    .judgments-title { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .judgments-grid { margin-bottom: 18px; }
+    .file-list-card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); overflow-x: auto; overflow-y: hidden; border: 1px solid #edf2f7; }
+    html.dark-mode .file-list-card { background: #0F172A; border-color: #334155; box-shadow: none; }
+    .file-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .file-table thead { background: #f8fafc; }
+    html.dark-mode .file-table thead { background: #111827; }
+    .file-table th { font-size: 0.75rem; padding: 10px 6px; text-align: center; color: #718096; border-bottom: 1px solid #edf2f7; }
+    html.dark-mode .file-table th { color: #94A3B8; border-bottom-color: #334155; }
+    .file-table td { padding: 10px 6px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; text-align: center; }
+    html.dark-mode .file-table td { border-bottom-color: #1E293B; }
+    .file-table tbody tr:last-child td { border-bottom: none; }
+    .judgment-row { transition: background-color 0.2s ease; cursor: pointer; }
+    .judgment-row:hover { background-color: #fcfdfe; }
+    .judgment-row:active { background-color: #f7fafc; }
+    html.dark-mode .judgment-row:hover { background-color: rgba(255,255,255,0.03); }
+    html.dark-mode .judgment-row:active { background-color: rgba(255,255,255,0.05); }
+    .file-info { display: flex; align-items: center; gap: 8px; text-align: right; position: relative; }
+    .file-icon { width: 40px; height: 40px; font-size: 1.1rem; color: #3498db; background: #ebf5ff; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 40px; }
+    html.dark-mode .file-icon { background: rgba(14,165,233,0.16); color: #7DD3FC; }
+    .name-wrapper { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-width: 0; }
+    .main-name { font-size: 0.84rem; font-weight: 700; color: #2d3436; line-height: 1.5; word-break: break-word; }
+    html.dark-mode .main-name { color: #E5E7EB; }
+    .size-info { font-size: 0.68rem; color: #a0aec0; font-weight: 400; line-height: 1.5; }
+    html.dark-mode .size-info { color: #94A3B8; }
+    .row-desc { display: none !important; }
+    html.dark-mode .row-desc { color: #CBD5E1; }
+    .row-extra { display: flex; align-items: center; gap: 5px; flex-wrap: nowrap; margin-top: 2px; }
+    .row-extra-inline { justify-content: flex-end; margin-top: 0; flex-wrap: nowrap; }
+    .list-favorite-btn { border: none; background: #fff5f5; color: #E11D48; min-width: 32px; height: 32px; border-radius: 999px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 15px; padding: 0 8px; box-shadow: 0 6px 12px rgba(225,29,72,0.12); }
+    .list-favorite-btn:not(.favorited) { background: #f8fafc; color: #94A3B8; }
+    html.dark-mode .list-favorite-btn:not(.favorited) { background: #1E293B; color: #CBD5E1; }
+    .rating-stars { color: #E2E8F0; font-size: 15px; display: inline-flex; align-items: center; gap: 1px; }
+    .star { cursor: pointer; }
+    .star.active { color: #F59E0B; }
+    .rating-count { font-size: 11px; color: var(--text-sub); font-weight: 700; min-width: 34px; text-align: center; }
+    .action-btns { display: flex; gap: 4px; justify-content: center; flex-wrap: nowrap; }
+    .btn { border: none; padding: 6px 10px; border-radius: 10px; font-size: 0.70rem; font-family: var(--font); font-weight: 800; color: white; cursor: pointer; min-width: 52px; min-height: 34px; display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 4px; transition: transform 0.2s ease, opacity 0.2s ease; white-space: nowrap; }
+    .btn:hover { transform: translateY(-1px); }
+    .btn-download { background-color: #2ecc71; }
+    .btn-open { background-color: #3498db; }
+    .btn-edit { background-color: #9b59b6; }
+    .btn-delete { background-color: #e74c3c; }
+    .btn.downloaded { background-color: #94a3b8; cursor: default; }
+    .btn.downloaded:hover { transform: none; }
+    .btn-icon { font-size: 0.9rem; line-height: 1; }
+    .btn-text { line-height: 1.1; white-space: nowrap; }
+    .login-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+    .login-btn.secondary { background: linear-gradient(135deg, #ef4444, #dc2626); box-shadow: 0 4px 12px rgba(239,68,68,0.18); }
+    .login-btn.secondary:hover { background: linear-gradient(135deg, #dc2626, #b91c1c); }
+    .file-table { table-layout: auto; }
+    .file-table thead th:last-child { display: none; }
+    .file-table thead th:first-child { width: 100% !important; }
+    .file-table tbody tr.compact-row td { padding: 8px 10px; border-bottom: 1px solid #edf2f7; text-align: right; }
+    html.dark-mode .file-table tbody tr.compact-row td { border-bottom-color: #1E293B; }
+    .file-entry-card { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+    .file-entry-card-compact { background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.98)); border: 1px solid rgba(99,102,241,0.12); border-radius: 14px; padding: 8px 10px; box-shadow: 0 6px 16px rgba(15,23,42,0.05); }
+    html.dark-mode .file-entry-card-compact { background: linear-gradient(180deg, rgba(30,41,59,0.98), rgba(15,23,42,0.98)); border-color: rgba(129,140,248,0.16); box-shadow: 0 8px 24px rgba(0,0,0,0.18); }
+    .file-entry-main { display: flex; align-items: center; gap: 8px; min-width: 0; width: 100%; }
+    .file-entry-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+    .file-name-box { display: flex; align-items: center; width: 100%; max-width: 100%; padding: 8px 10px; border-radius: 10px; background: linear-gradient(135deg, #eef2ff, #f8fafc); border: 1px solid rgba(99,102,241,0.18); box-shadow: 0 5px 12px rgba(99,102,241,0.06); }
+    html.dark-mode .file-name-box { background: linear-gradient(135deg, rgba(79,70,229,0.18), rgba(15,23,42,0.92)); border-color: rgba(129,140,248,0.22); }
+    .main-name { display: block; max-width: 100%; line-height: 1.45; font-size: 0.90rem; font-weight: 800; }
+    .file-meta-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: nowrap; overflow-x: auto; }
+    .file-meta-box { display: flex; flex-wrap: nowrap; gap: 6px; align-items: center; flex: 1 1 220px; }
+    .file-meta-chip { display: inline-flex; align-items: center; gap: 5px; padding: 5px 9px; border-radius: 999px; background: #f8fafc; color: #475569; font-size: 0.67rem; font-weight: 800; border: 1px solid #e2e8f0; white-space: nowrap; }
+    html.dark-mode .file-meta-chip { background: rgba(30,41,59,0.92); color: #cbd5e1; border-color: rgba(148,163,184,0.18); }
+    .action-btns.inline-under-data, .search-result-actions { display: flex; flex-wrap: nowrap; gap: 4px; width: 100%; justify-content: flex-start; margin-top: 2px; overflow-x: auto; padding-bottom: 2px; }
+    .action-btns.inline-under-data .btn, .search-result-actions .btn { width: auto; min-width: fit-content; min-height: 34px; padding: 6px 10px; border-radius: 10px; font-size: 0.70rem; box-shadow: 0 6px 12px rgba(15,23,42,0.07); flex: 0 0 auto; }
+    .search-result-actions { display: flex; gap: 4px; flex-wrap: nowrap; }
+    .search-result-item { padding-top: 20px !important; }
+    @media (max-width: 768px) {
+      .file-entry-main { gap: 8px; }
+      .file-name-box { max-width: 100%; }
+      .file-meta-row { align-items: flex-start; }
+      .row-extra-inline { justify-content: flex-start; }
+      .action-btns.inline-under-data, .search-result-actions { gap: 4px; }
+      .action-btns.inline-under-data .btn, .search-result-actions .btn { min-height: 34px; }
+    }
+    @media (max-width: 520px) {
+      .file-entry-card-compact { padding: 8px; }
+      .file-icon { width: 34px; height: 34px; flex-basis: 34px; }
+      .main-name { font-size: 0.86rem; }
+      .file-meta-chip { font-size: 0.64rem; padding: 4px 8px; }
+      .list-favorite-btn { min-width: 28px; height: 28px; font-size: 13px; }
+      .rating-stars { font-size: 13px; }
+      .action-btns.inline-under-data, .search-result-actions { gap: 3px; }
+    }
+    @media (max-width: 768px) {
+      .file-table, .file-table thead, .file-table tbody, .file-table tr, .file-table th, .file-table td { display: block; width: 100%; }
+      .file-table thead { display: none; }
+      .judgment-row { padding: 10px 0; border-bottom: 1px solid #edf2f7; }
+      html.dark-mode .judgment-row { border-bottom-color: #1E293B; }
+      .file-table td { border: none; padding: 6px 12px; }
+      .file-table td:last-child { padding-top: 0; }
+      .action-btns { justify-content: flex-start; }
+      .btn { min-width: 52px; }
+    }
+    /* Viewer Modal */
+    .viewer-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg); z-index: 1000; display: none; flex-direction: column; }
+    .viewer-modal.active { display: flex; }
+    .viewer-header { background: var(--surface); padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .viewer-title { font-weight: 700; font-size: 16px; color: var(--text); }
+    .viewer-btn-close { background: var(--danger); color: white; border: none; padding: 8px 16px; border-radius: var(--radius-xs); font-family: var(--font); font-weight: 700; cursor: pointer; }
+    .viewer-content { flex: 1; background: #525659; }
+    #pdfFrame { width: 100%; height: 100%; border: none; }
+
+    /* Open Options Modal */
+    .open-options-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1100; display: none; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px); }
+    .open-options-modal.active { display: flex; }
+    .open-options-card { background: var(--surface); border-radius: var(--radius); width: 100%; max-width: 400px; padding: 24px; box-shadow: var(--shadow); }
+    .open-options-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; color: var(--text); }
+    .open-options-subtitle { font-size: 14px; color: var(--text-muted); margin-bottom: 24px; }
+    .open-options-actions { display: flex; flex-direction: column; gap: 12px; }
+    .open-options-btn { padding: 14px; border-radius: var(--radius-sm); border: none; font-family: var(--font); font-weight: 700; font-size: 15px; cursor: pointer; transition: all 0.2s ease; text-align: center; }
+    .open-options-btn-internal { background: var(--primary); color: white; }
+    .open-options-btn-external { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+    .open-options-cancel { margin-top: 16px; background: none; border: none; color: var(--text-muted); font-family: var(--font); font-weight: 600; cursor: pointer; width: 100%; }
+
+    /* Empty State */
+    .empty-state { text-align: center; padding: 48px 20px; }
+    .empty-state-icon { font-size: 64px; margin-bottom: 16px; opacity: 0.5; }
+    .empty-state-title { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+    .empty-state-text { font-size: 14px; color: var(--text-muted); }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    /* ===== SUSPENDED OVERLAY ===== */
+    #suspendedOverlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15,23,42,0.96); z-index: 5000; display: none; align-items: center; justify-content: center; flex-direction: column; padding: 20px; backdrop-filter: blur(8px); }
+    #suspendedOverlay.active { display: flex; }
+    .suspended-card { background: #1E293B; border: 2px solid #F59E0B; border-radius: 24px; padding: 40px 32px; max-width: 400px; width: 100%; text-align: center; box-shadow: 0 0 60px rgba(245,158,11,0.3); animation: suspendedPulse 2s ease-in-out infinite; }
+    @keyframes suspendedPulse { 0%, 100% { box-shadow: 0 0 40px rgba(245,158,11,0.2); } 50% { box-shadow: 0 0 80px rgba(245,158,11,0.5); } }
+    .suspended-icon { font-size: 72px; margin-bottom: 20px; animation: suspendedBounce 1.5s ease-in-out infinite; display: block; }
+    @keyframes suspendedBounce { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.15); } }
+    .suspended-title { font-size: 24px; font-weight: 900; color: #F59E0B; margin-bottom: 12px; }
+    .suspended-msg { font-size: 15px; color: #CBD5E1; line-height: 1.7; margin-bottom: 24px; }
+    .suspended-waiting { display: flex; align-items: center; justify-content: center; gap: 10px; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); border-radius: 50px; padding: 12px 20px; }
+    .suspended-spinner { width: 20px; height: 20px; border: 3px solid rgba(245,158,11,0.3); border-top: 3px solid #F59E0B; border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .suspended-waiting-text { color: #F59E0B; font-size: 13px; font-weight: 700; }
+    .suspended-dots { color: #F59E0B; font-size: 18px; font-weight: 900; min-width: 30px; text-align: left; }
+
+    /* ===== TAB LOCKED OVERLAY ===== */
+    .tab-locked-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15,23,42,0.85); z-index: 100; display: flex; align-items: center; justify-content: center; border-radius: var(--radius); min-height: 300px; backdrop-filter: blur(6px); }
+    .tab-locked-content { text-align: center; padding: 40px 20px; }
+    .tab-locked-icon { font-size: 64px; margin-bottom: 16px; display: block; }
+    .tab-locked-title { font-size: 22px; font-weight: 900; color: #F8FAFC; margin-bottom: 10px; }
+    .tab-locked-msg { font-size: 14px; color: #94A3B8; line-height: 1.7; }
+
+    /* ===== ACTIVATION TOAST ===== */
+    #activationToast { position: fixed; bottom: 30px; right: 50%; transform: translateX(50%) translateY(100px); background: linear-gradient(135deg, #10B981, #059669); color: white; padding: 16px 24px; border-radius: 50px; font-size: 15px; font-weight: 800; z-index: 6000; box-shadow: 0 8px 24px rgba(16,185,129,0.4); transition: transform 0.4s cubic-bezier(.4,0,.2,1), opacity 0.4s ease; opacity: 0; display: flex; align-items: center; gap: 10px; }
+    #activationToast.show { transform: translateX(50%) translateY(0); opacity: 1; }
+
+    /* Download Overlay */
+    .download-progress-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 2000; display: none; align-items: center; justify-content: center; flex-direction: column; color: white; }
+    .download-progress-overlay.active { display: flex; }
+    .progress-container { width: 80%; max-width: 300px; height: 8px; background: rgba(255,255,255,0.2); border-radius: 4px; margin: 20px 0; overflow: hidden; }
+    .progress-bar { height: 100%; background: var(--primary); width: 0%; transition: width 0.3s ease; }
+
+    /* ===== ADMIN PANEL ===== */
+    #adminPanel { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 3000; display: none; align-items: flex-start; justify-content: center; padding: 20px; backdrop-filter: blur(4px); overflow-y: auto; }
+    #adminPanel.active { display: flex; }
+    .admin-panel-card { background: var(--surface); border-radius: var(--radius); width: 100%; max-width: 600px; box-shadow: 0 20px 60px rgba(0,0,0,0.4); margin: auto; overflow: hidden; }
+    .admin-panel-header { background: linear-gradient(135deg, #4F46E5, #7C3AED); color: white; padding: 20px 24px; display: flex; align-items: center; justify-content: space-between; }
+    .admin-panel-header h2 { font-size: 20px; font-weight: 900; margin: 0; display: flex; align-items: center; gap: 10px; }
+    .admin-panel-close { background: rgba(255,255,255,0.2); border: none; color: white; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
+    .admin-panel-close:hover { background: rgba(255,255,255,0.4); }
+    .admin-panel-body { padding: 24px; }
+
+    /* Create User Form */
+    .admin-section-title { font-size: 15px; font-weight: 800; color: var(--primary); margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid var(--border); display: flex; align-items: center; gap: 8px; }
+    .admin-form { background: var(--surface2); border-radius: var(--radius-sm); padding: 20px; margin-bottom: 24px; }
+    .admin-field { margin-bottom: 14px; }
+    .admin-field label { display: block; font-size: 13px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px; }
+    .admin-field input[type="text"],
+    .admin-field input[type="password"] { width: 100%; padding: 12px 14px; border: 2px solid var(--border); border-radius: var(--radius-xs); font-family: var(--font); font-size: 14px; outline: none; background: var(--surface); color: var(--text); transition: border-color 0.2s; box-sizing: border-box; }
+    .admin-field input:focus { border-color: var(--primary); }
+    .perm-group { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 4px; }
+    .perm-item { display: flex; align-items: center; gap: 6px; background: var(--surface); border: 2px solid var(--border); border-radius: var(--radius-xs); padding: 8px 12px; cursor: pointer; transition: all 0.2s; }
+    .perm-item:has(input:checked) { border-color: var(--primary); background: rgba(99,102,241,0.08); }
+    .perm-item input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--primary); cursor: pointer; }
+    .perm-item span { font-size: 13px; font-weight: 600; color: var(--text); }
+    .admin-create-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; border: none; border-radius: var(--radius-sm); font-family: var(--font); font-weight: 900; font-size: 15px; cursor: pointer; transition: all 0.2s; margin-top: 4px; }
+    .admin-create-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(99,102,241,0.4); }
+    .admin-message { padding: 10px 14px; border-radius: var(--radius-xs); font-size: 13px; font-weight: 700; margin-top: 12px; display: none; }
+    .admin-message.success { background: #D1FAE5; color: #065F46; }
+    .admin-message.error { background: #FEE2E2; color: #991B1B; }
+
+    /* Users List */
+    .admin-user-list { display: flex; flex-direction: column; gap: 10px; max-height: 300px; overflow-y: auto; padding-right: 4px; }
+    .admin-user-row { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-xs); padding: 14px 16px; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .admin-user-info { flex: 1; }
+    .admin-user-name { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+    .admin-user-details { font-size: 12px; color: var(--text-sub); }
+    .admin-user-perms { font-size: 12px; color: var(--primary); font-weight: 600; margin-top: 4px; }
+    .admin-delete-btn { background: #FEE2E2; color: #EF4444; border: 1px solid #FECACA; padding: 6px 12px; border-radius: var(--radius-xs); font-family: var(--font); font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+    .admin-delete-btn:hover { background: #EF4444; color: white; }
+    .admin-badge { background: linear-gradient(135deg, #F59E0B, #D97706); color: white; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+    .admin-user-status { margin-top: 8px; }
+    .admin-status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; font-size: 11px; font-weight: 800; }
+    .admin-status-badge.active { background: #DCFCE7; color: #166534; }
+    .admin-status-badge.suspended { background: #FEF3C7; color: #92400E; }
+    .admin-status-badge.admin { background: #EDE9FE; color: #6D28D9; }
+    .admin-user-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    .admin-action-btn, .admin-suspend-btn, .admin-save-btn, .admin-cancel-btn { border: none; border-radius: var(--radius-xs); padding: 8px 12px; font-family: var(--font); font-size: 12px; font-weight: 800; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+    .admin-action-btn { background: #EEF2FF; color: #4338CA; border: 1px solid #C7D2FE; }
+    .admin-action-btn:hover { background: #4338CA; color: white; }
+    .admin-suspend-btn { background: #FEF3C7; color: #92400E; border: 1px solid #FDE68A; }
+    .admin-suspend-btn:hover { background: #F59E0B; color: white; }
+    .admin-suspend-btn.resume { background: #DCFCE7; color: #166534; border-color: #BBF7D0; }
+    .admin-suspend-btn.resume:hover { background: #16A34A; color: white; }
+    .admin-edit-card { display: none; background: var(--surface2); border: 2px dashed var(--border-glow); border-radius: var(--radius-sm); padding: 20px; margin-top: 20px; }
+    .admin-edit-title { font-size: 16px; font-weight: 900; color: var(--text); margin-bottom: 4px; }
+    .admin-edit-subtitle { font-size: 12px; color: var(--text-muted); margin-bottom: 16px; }
+    .admin-readonly-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-xs); padding: 14px; margin-bottom: 16px; }
+    .admin-readonly-name { font-size: 15px; font-weight: 800; color: var(--text); }
+    .admin-readonly-username { font-size: 12px; color: var(--text-sub); margin-top: 4px; }
+    .admin-edit-note { font-size: 12px; color: var(--text-muted); background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.15); padding: 10px 12px; border-radius: var(--radius-xs); margin-top: 14px; }
+    .admin-edit-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+    .admin-save-btn { background: linear-gradient(135deg, #10B981, #059669); color: white; }
+    .admin-save-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(16,185,129,0.25); }
+    .admin-cancel-btn { background: var(--surface); color: var(--text-muted); border: 1px solid var(--border); }
+    .admin-cancel-btn:hover { background: var(--card-hover); color: var(--text); }
+    .admin-form-note { font-size: 12px; color: var(--text-muted); margin-top: 10px; line-height: 1.7; }
+
+    /* ===== STRICT VISUAL LOCKDOWN FOR NON-GENERAL USERS ===== */
+    body.restricted-user-mode #adminPanelBtn,
+    body.restricted-user-mode #adminPanel,
+    body.restricted-user-mode #permissionSyncBtn,
+    body.restricted-user-mode #fullSyncBtn,
+    body.restricted-user-mode #serverConfigEditorBtn,
+    body.restricted-user-mode #serverConfigEditorPanel,
+    body.restricted-user-mode #sourceCodeEditorBtn,
+    body.restricted-user-mode #sourceCodeEditorPanel,
+    body.restricted-user-mode .admin-panel-card {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+    #sourceCodeEditorPanel { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.66); z-index: 3200; display: none; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(5px); }
+    #sourceCodeEditorPanel.active { display: flex; }
+    #serverConfigEditorPanel { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.66); z-index: 3210; display: none; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(5px); }
+    #serverConfigEditorPanel.active { display: flex; }
+    .server-config-card { background: var(--surface); border-radius: var(--radius); width: min(980px, 100%); max-height: 92vh; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 24px 60px rgba(0,0,0,0.35); }
+    .server-config-header { background: linear-gradient(135deg, #0F766E, #0EA5A4); color: white; padding: 18px 22px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .server-config-header h2 { margin: 0; font-size: 19px; font-weight: 900; }
+    .server-config-body { padding: 22px; overflow: auto; display: flex; flex-direction: column; gap: 14px; }
+    .server-config-note { background: rgba(13,148,136,0.10); border: 1px solid rgba(13,148,136,0.24); color: var(--text); border-radius: 12px; padding: 12px 14px; font-size: 13px; font-weight: 700; line-height: 1.8; }
+    .server-config-grid { display: grid; gap: 14px; }
+    .server-config-field label { display: block; font-size: 13px; font-weight: 800; color: var(--text-muted); margin-bottom: 8px; }
+    .server-config-input { width: 100%; padding: 12px 14px; border: 2px solid var(--border); border-radius: 14px; background: var(--surface); color: var(--text); font-family: var(--font); font-size: 14px; box-sizing: border-box; outline: none; }
+    .server-config-input:focus { border-color: #0F766E; box-shadow: 0 0 0 4px rgba(13,148,136,0.10); }
+    .server-config-textarea { min-height: 28vh; }
+    .source-editor-card { background: var(--surface); border-radius: var(--radius); width: min(1180px, 100%); max-height: 92vh; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 30px 70px rgba(0,0,0,0.35); border: 1px solid rgba(99,102,241,0.12); }
+    .source-editor-header { background: linear-gradient(135deg, #111827, #1f2937); color: white; padding: 18px 22px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .source-editor-header h2 { margin: 0; font-size: 19px; font-weight: 900; }
+    .source-editor-close { background: rgba(255,255,255,0.16); border: none; color: white; width: 38px; height: 38px; border-radius: 50%; font-size: 18px; cursor: pointer; }
+    .source-editor-body { padding: 22px; overflow: auto; display: flex; flex-direction: column; gap: 14px; }
+    .source-editor-note { background: rgba(245,158,11,0.10); border: 1px solid rgba(245,158,11,0.24); color: var(--text); border-radius: 12px; padding: 12px 14px; font-size: 13px; font-weight: 700; line-height: 1.8; }
+    .source-editor-meta { background: rgba(37,99,235,0.08); border: 1px solid rgba(37,99,235,0.16); color: var(--text-muted); border-radius: 12px; padding: 12px 14px; font-size: 13px; line-height: 1.8; white-space: pre-wrap; }
+    .source-editor-textarea { width: 100%; min-height: 52vh; resize: vertical; border: 2px solid var(--border); border-radius: 16px; background: #0F172A; color: #E2E8F0; font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace; font-size: 13px; line-height: 1.7; padding: 16px; direction: ltr; text-align: left; box-sizing: border-box; tab-size: 2; outline: none; }
+    .source-editor-textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(99,102,241,0.12); }
+    .source-editor-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .source-editor-actions .admin-save-btn,
+    .source-editor-actions .admin-cancel-btn,
+    .source-editor-actions .admin-action-btn { min-height: 44px; }
+    @media (max-width: 768px) {
+      .source-editor-body { padding: 16px; }
+      .source-editor-textarea { min-height: 46vh; font-size: 12px; }
+      .source-editor-actions > * { flex: 1 1 100%; }
+      .server-config-body { padding: 16px; }
+      .server-config-textarea { min-height: 24vh; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Login Screen -->
+  <div id="loginScreen">
+    <div class="login-card">
+      <div class="login-logo">⚖️</div>
+      <h2>بيانات محكمة القفر الابتدائية</h2>
+      <p>يرجى تسجيل الدخول للمتابعة</p>
+      <div class="login-field">
+        <label>اسم المستخدم</label>
+        <input type="text" id="usernameInput" placeholder="أدخل اسم المستخدم" autocomplete="off">
+      </div>
+      <div class="login-field">
+        <label>كلمة المرور</label>
+        <input type="password" id="passwordInput" placeholder="أدخل كلمة المرور">
+      </div>
+      <div class="login-actions">
+      <button class="login-btn" id="loginBtn">دخول</button>
+      <button class="login-btn secondary" id="fullExitBtn" type="button">خروج نهائي</button>
+      </div>
+      <div id="loginError" class="login-error">بيانات الدخول غير صحيحة!</div>
+    </div>
+  </div>
+
+  <!-- Main App -->
+  <div id="app" style="display: none;">
+    <div id="sourceEditableRoot">
+    <header class="header">
+      <div class="header-content">
+        <div class="header-top">
+          <div class="header-logo">
+            <div class="logo-icon">⚖️</div>
+            <div class="logo-text">
+              <h1 id="appTitle">بيانات محكمة القفر الابتدائية</h1>
+              <p id="headerSubtitle">مدونة الأحكام القضائية للقضايا المستعجلة للعام 1447هـ - واجهة محسّنة لعرض الأحكام والملفات القضائية بوضوح</p>
+            </div>
+          </div>
+          <div class="header-controls">
+            <div id="connectionStatus" class="connection-status"><span>🌐</span> متصل</div>
+            <span id="currentUserInfo" class="current-user-info"></span>
+            <button class="sync-btn" id="permissionSyncBtn" style="display:none;" title="تحديث صلاحيات المستخدم من الخادم المركزي فقط">🔐 تحديث الصلاحيات</button>
+            <button class="sync-btn" id="fullSyncBtn" style="display:none;" title="مزامنة كاملة للصلاحيات والملفات من الخادم المركزي">🔄 مزامنة كاملة</button>
+                        <button class="admin-btn" id="sourceCodeEditorBtn" style="display:none;" title="تحرير صفحة HTML كاملة">🧩 محرر صفحة HTML</button>
+            <button class="admin-btn" id="adminPanelBtn" style="display:none;" title="إدارة المستخدمين">⚙️ المستخدمون</button>
+            <button class="theme-toggle" id="themeToggle" title="تبديل الوضع الليلي">🌙</button>
+            <button class="logout-btn" id="logoutBtn" title="تسجيل الخروج">🚪 خروج</button>
+          </div>
+        </div>
+        <div class="header-actions-row">
+          <div class="search-toolbar">
+            <div class="search-box-compact search-box-global">
+              <span class="search-icon">🔎</span>
+              <input type="text" id="unifiedSearchInput" placeholder="ابحث في جميع التبويبات" />
+            </div>
+            <button class="search-submit-btn" id="unifiedSearchBtn" type="button">🔍 بحث</button>
+          </div>
+          <div class="settings-container">
+            <button class="main-btn" id="settingsMenuBtn" onclick="toggleDropdown(event)">
+              <span>⚙️ القائمة</span>
+            </button>
+            <div class="dropdown-panel" id="panel">
+              <div class="menu-clock" id="digitalClock">--:--:--</div>
+              <div class="menu-header">مركز التحكم</div>
+              <a href="#" class="menu-item" id="menuPermissionSync" data-target="permissionSyncBtn"><span class="icon-dot"></span>تحديث الصلاحيات</a>
+              <a href="#" class="menu-item" id="menuFullSync" data-target="fullSyncBtn"><span class="icon-dot"></span>مزامنة كاملة</a>
+                            <a href="#" class="menu-item" id="menuSourceEditor" data-target="sourceCodeEditorBtn"><span class="icon-dot"></span>محرر صفحة HTML</a>
+              <a href="#" class="menu-item" id="menuUsers" data-target="adminPanelBtn"><span class="icon-dot"></span>المستخدمون</a>
+              <a href="#" class="menu-item" id="menuThemeToggle" data-target="themeToggle"><span class="icon-dot"></span><span id="menuThemeLabel">الوضع الليلي</span></a>
+              <div class="divider"></div>
+              <a href="#" class="menu-item logout-item" id="menuLogout" data-target="logoutBtn">🚪 تسجيل الخروج</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <nav class="tabs-nav">
+      <div class="tab-admin-cluster">
+        <button class="tab-btn active" id="tabButton_tab1" onclick="switchTab('tab1')"><span class="tab-icon">⚡</span><span class="tab-label-text" id="tabLabelText_tab1">الأحكام المستعجلة</span><span class="tab-count-badge" id="tabCount_tab1">0</span></button>
+        <button class="tab-upload-trigger" id="uploadBtn_tab1" style="display:none;" onclick="triggerTabFilePicker('tab1')" title="إضافة ملف إلى هذا التبويب"><span>➕</span><span>إضافة ملف</span></button>
+        <button class="tab-settings-trigger" id="tabSettingsBtn" style="display:none;" title="تعديل أسماء التبويبات وتحديث الصفحة">✏️</button>
+      </div>
+      <div class="tab-upload-cluster">
+        <button class="tab-btn" id="tabButton_tab2" onclick="switchTab('tab2')"><span class="tab-icon">📜</span><span class="tab-label-text" id="tabLabelText_tab2">القضايا المدنية</span><span class="tab-count-badge" id="tabCount_tab2">0</span></button>
+        <button class="tab-upload-trigger" id="uploadBtn_tab2" style="display:none;" onclick="triggerTabFilePicker('tab2')" title="إضافة ملف إلى هذا التبويب"><span>➕</span><span>إضافة ملف</span></button>
+      </div>
+      <div class="tab-upload-cluster">
+        <button class="tab-btn" id="tabButton_tab3" onclick="switchTab('tab3')"><span class="tab-icon">👤</span><span class="tab-label-text" id="tabLabelText_tab3">الأحكام الشخصية</span><span class="tab-count-badge" id="tabCount_tab3">0</span></button>
+        <button class="tab-upload-trigger" id="uploadBtn_tab3" style="display:none;" onclick="triggerTabFilePicker('tab3')" title="إضافة ملف إلى هذا التبويب"><span>➕</span><span>إضافة ملف</span></button>
+      </div>
+      <div class="tab-upload-cluster">
+        <button class="tab-btn" id="tabButton_tab4" onclick="switchTab('tab4')"><span class="tab-icon">⚖️</span><span class="tab-label-text" id="tabLabelText_tab4">الأحكام الجزائية</span><span class="tab-count-badge" id="tabCount_tab4">0</span></button>
+        <button class="tab-upload-trigger" id="uploadBtn_tab4" style="display:none;" onclick="triggerTabFilePicker('tab4')" title="إضافة ملف إلى هذا التبويب"><span>➕</span><span>إضافة ملف</span></button>
+      </div>
+      <div class="tab-upload-cluster">
+        <button class="tab-btn" id="tabButton_tab5" onclick="switchTab('tab5')"><span class="tab-icon">🧾</span><span class="tab-label-text" id="tabLabelText_tab5">أحكام الوراثة</span><span class="tab-count-badge" id="tabCount_tab5">0</span></button>
+        <button class="tab-upload-trigger" id="uploadBtn_tab5" style="display:none;" onclick="triggerTabFilePicker('tab5')" title="إضافة ملف إلى هذا التبويب"><span>➕</span><span>إضافة ملف</span></button>
+      </div>
+      <div class="tab-upload-cluster">
+        <button class="tab-btn" id="tabButton_tab6" onclick="switchTab('tab6')"><span class="tab-icon">🏛️</span><span class="tab-label-text" id="tabLabelText_tab6">نماذج المحكمة</span><span class="tab-count-badge" id="tabCount_tab6">0</span></button>
+        <button class="tab-upload-trigger" id="uploadBtn_tab6" style="display:none;" onclick="triggerTabFilePicker('tab6')" title="إضافة ملف إلى هذا التبويب"><span>➕</span><span>إضافة ملف</span></button>
+      </div>
+      <div class="tab-upload-cluster">
+        <button class="tab-btn" id="tabButton_tab7" onclick="switchTab('tab7')"><span class="tab-icon">📚</span><span class="tab-label-text" id="tabLabelText_tab7">الملخصات</span><span class="tab-count-badge" id="tabCount_tab7">0</span></button>
+        <button class="tab-upload-trigger" id="uploadBtn_tab7" style="display:none;" onclick="triggerTabFilePicker('tab7')" title="إضافة ملف إلى هذا التبويب"><span>➕</span><span>إضافة ملف</span></button>
+      </div>
+    </nav>
+    <input type="file" id="sharedFilePicker" style="display:none;" multiple />
+
+    <section id="searchResultsScreen" class="search-screen">
+      <div class="search-screen-card">
+        <div class="search-screen-top">
+          <div>
+            <div class="search-screen-title">نتائج البحث الشامل</div>
+            <div class="search-screen-subtitle" id="searchResultsSubtitle">ابحث في جميع التبويبات وستظهر النتائج هنا مع عددها ومكانها.</div>
+          </div>
+          <div class="search-screen-actions">
+            <button class="search-screen-btn secondary" type="button" id="clearSearchBtn">مسح البحث</button>
+            <button class="search-screen-btn primary" type="button" id="closeSearchResultsBtn">إغلاق النتائج</button>
+          </div>
+        </div>
+        <div class="search-summary-grid">
+          <div class="search-summary-card">
+            <div class="search-summary-label">إجمالي النتائج</div>
+            <div class="search-summary-value" id="searchResultsCount">0</div>
+          </div>
+          <div class="search-summary-card">
+            <div class="search-summary-label">عبارة البحث</div>
+            <div class="search-summary-value" id="searchQueryLabel">—</div>
+          </div>
+        </div>
+        <div class="search-summary-breakdown" id="searchResultsBreakdown"></div>
+        <div class="search-results-groups" id="searchResultsGroups"></div>
+      </div>
+    </section>
+
+    <!-- Tab 1 -->
+    <main class="main-content active" id="tab1">
+      <div class="content-wrapper">
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-label">إجمالي الأحكام</div><div class="stat-value" id="totalJudgments1">0</div></div>
+          <div class="stat-card"><div class="stat-label">أحكام مفضلة</div><div class="stat-value" id="favoritesCount1">0</div></div>
+        </div>
+        <div class="court-info">
+          <h2>ℹ️ معلومات المحكمة</h2>
+          <div class="court-info-grid">
+            <div class="court-info-item"><div class="court-info-label">المحكمة</div><div class="court-info-value">محكمة القفر الابتدائية</div></div>
+            <div class="court-info-item"><div class="court-info-label">رئيس المحكمة</div><div class="court-info-value">القاضي صدام علي علي الحنظلي</div></div>
+          </div>
+        </div>
+        <div class="filters-section">
+          <div class="filters-title">🔽 فلترة الأحكام</div>
+          <div class="filters-grid">
+            <button class="filter-btn active" data-filter="all" onclick="setFilter('all', 'tab1')">جميع الأحكام</button>
+            <button class="filter-btn" data-filter="favorites" onclick="setFilter('favorites', 'tab1')">⭐ المفضلة</button>
+            <button class="filter-btn" data-filter="rated" onclick="setFilter('rated', 'tab1')">📊 المقيمة</button>
+          </div>
+        </div>
+        <h3 class="judgments-title" id="judgmentsTitle_tab1">📋 قائمة الأحكام المستعجلة</h3>
+        <div class="judgments-grid">
+          <div class="file-list-card">
+            <table class="file-table">
+              <thead>
+                <tr>
+                  <th style="width: 45%;">القضية / الملف</th>
+                  <th style="width: 55%;">الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="judgmentsContainer1"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="empty-state" id="emptyState1" style="display: none;"><div class="empty-state-icon">📭</div><div class="empty-state-title">جاري تحميل الفهرس من السحابة...</div></div>
+      </div>
+    </main>
+
+    <!-- Tab 2 -->
+    <main class="main-content" id="tab2">
+      <div class="content-wrapper">
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-label">إجمالي الأحكام</div><div class="stat-value" id="totalJudgments2">0</div></div>
+          <div class="stat-card"><div class="stat-label">أحكام مفضلة</div><div class="stat-value" id="favoritesCount2">0</div></div>
+        </div>
+        <div class="court-info">
+          <h2>ℹ️ معلومات المحكمة</h2>
+          <div class="court-info-grid">
+            <div class="court-info-item"><div class="court-info-label">المحكمة</div><div class="court-info-value">محكمة القفر الابتدائية</div></div>
+            <div class="court-info-item"><div class="court-info-label">رئيس المحكمة</div><div class="court-info-value">القاضي صدام علي علي الحنظلي</div></div>
+          </div>
+        </div>
+        <div class="filters-section">
+          <div class="filters-title">🔽 فلترة الأحكام</div>
+          <div class="filters-grid">
+            <button class="filter-btn active" data-filter="all" onclick="setFilter('all', 'tab2')">جميع الأحكام</button>
+            <button class="filter-btn" data-filter="favorites" onclick="setFilter('favorites', 'tab2')">⭐ المفضلة</button>
+            <button class="filter-btn" data-filter="rated" onclick="setFilter('rated', 'tab2')">📊 المقيمة</button>
+          </div>
+        </div>
+        <h3 class="judgments-title" id="judgmentsTitle_tab2">📋 قائمة القضايا المدنية</h3>
+        <div class="judgments-grid">
+          <div class="file-list-card">
+            <table class="file-table">
+              <thead>
+                <tr>
+                  <th style="width: 45%;">القضية / الملف</th>
+                  <th style="width: 55%;">الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="judgmentsContainer2"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="empty-state" id="emptyState2" style="display: none;"><div class="empty-state-icon">📭</div><div class="empty-state-title">جاري تحميل الفهرس من السحابة...</div></div>
+      </div>
+    </main>
+
+    <!-- Tab 3 -->
+    <main class="main-content" id="tab3">
+      <div class="content-wrapper">
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-label">إجمالي الأحكام</div><div class="stat-value" id="totalJudgments3">0</div></div>
+          <div class="stat-card"><div class="stat-label">أحكام مفضلة</div><div class="stat-value" id="favoritesCount3">0</div></div>
+        </div>
+        <div class="court-info">
+          <h2>ℹ️ معلومات المحكمة</h2>
+          <div class="court-info-grid">
+            <div class="court-info-item"><div class="court-info-label">المحكمة</div><div class="court-info-value">محكمة القفر الابتدائية</div></div>
+            <div class="court-info-item"><div class="court-info-label">رئيس المحكمة</div><div class="court-info-value">القاضي صدام علي علي الحنظلي</div></div>
+          </div>
+        </div>
+        <div class="filters-section">
+          <div class="filters-title">🔽 فلترة الأحكام</div>
+          <div class="filters-grid">
+            <button class="filter-btn active" data-filter="all" onclick="setFilter('all', 'tab3')">جميع الأحكام</button>
+            <button class="filter-btn" data-filter="favorites" onclick="setFilter('favorites', 'tab3')">⭐ المفضلة</button>
+            <button class="filter-btn" data-filter="rated" onclick="setFilter('rated', 'tab3')">📊 المقيمة</button>
+          </div>
+        </div>
+        <h3 class="judgments-title" id="judgmentsTitle_tab3">📋 قائمة الأحكام الشخصية</h3>
+        <div class="judgments-grid">
+          <div class="file-list-card">
+            <table class="file-table">
+              <thead>
+                <tr>
+                  <th style="width: 45%;">القضية / الملف</th>
+                  <th style="width: 55%;">الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="judgmentsContainer3"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="empty-state" id="emptyState3" style="display: none;"><div class="empty-state-icon">📭</div><div class="empty-state-title">جاري تحميل الفهرس من السحابة...</div></div>
+      </div>
+    </main>
+
+    <!-- Tab 4 -->
+    <main class="main-content" id="tab4">
+      <div class="content-wrapper">
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-label">إجمالي الأحكام</div><div class="stat-value" id="totalJudgments4">0</div></div>
+          <div class="stat-card"><div class="stat-label">أحكام مفضلة</div><div class="stat-value" id="favoritesCount4">0</div></div>
+        </div>
+        <div class="court-info">
+          <h2>ℹ️ معلومات المحكمة</h2>
+          <div class="court-info-grid">
+            <div class="court-info-item"><div class="court-info-label">المحكمة</div><div class="court-info-value">محكمة القفر الابتدائية</div></div>
+            <div class="court-info-item"><div class="court-info-label">رئيس المحكمة</div><div class="court-info-value">القاضي صدام علي علي الحنظلي</div></div>
+          </div>
+        </div>
+        <div class="filters-section">
+          <div class="filters-title">🔽 فلترة الأحكام</div>
+          <div class="filters-grid">
+            <button class="filter-btn active" data-filter="all" onclick="setFilter('all', 'tab4')">جميع الأحكام</button>
+            <button class="filter-btn" data-filter="favorites" onclick="setFilter('favorites', 'tab4')">⭐ المفضلة</button>
+            <button class="filter-btn" data-filter="rated" onclick="setFilter('rated', 'tab4')">📊 المقيمة</button>
+          </div>
+        </div>
+        <h3 class="judgments-title" id="judgmentsTitle_tab4">⚖️ قائمة الأحكام الجزائية</h3>
+        <div class="judgments-grid">
+          <div class="file-list-card">
+            <table class="file-table">
+              <thead>
+                <tr>
+                  <th style="width: 45%;">القضية / الملف</th>
+                  <th style="width: 55%;">الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="judgmentsContainer4"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="empty-state" id="emptyState4" style="display: none;"><div class="empty-state-icon">📭</div><div class="empty-state-title">جاري تحميل الفهرس من السحابة...</div></div>
+      </div>
+    </main>
+
+    <!-- Tab 5 -->
+    <main class="main-content" id="tab5">
+      <div class="content-wrapper">
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-label">إجمالي الأحكام</div><div class="stat-value" id="totalJudgments5">0</div></div>
+          <div class="stat-card"><div class="stat-label">أحكام مفضلة</div><div class="stat-value" id="favoritesCount5">0</div></div>
+        </div>
+        <div class="court-info">
+          <h2>ℹ️ معلومات المحكمة</h2>
+          <div class="court-info-grid">
+            <div class="court-info-item"><div class="court-info-label">المحكمة</div><div class="court-info-value">محكمة القفر الابتدائية</div></div>
+            <div class="court-info-item"><div class="court-info-label">رئيس المحكمة</div><div class="court-info-value">القاضي صدام علي علي الحنظلي</div></div>
+          </div>
+        </div>
+        <div class="filters-section">
+          <div class="filters-title">🔽 فلترة الأحكام</div>
+          <div class="filters-grid">
+            <button class="filter-btn active" data-filter="all" onclick="setFilter('all', 'tab5')">جميع الأحكام</button>
+            <button class="filter-btn" data-filter="favorites" onclick="setFilter('favorites', 'tab5')">⭐ المفضلة</button>
+            <button class="filter-btn" data-filter="rated" onclick="setFilter('rated', 'tab5')">📊 المقيمة</button>
+          </div>
+        </div>
+        <h3 class="judgments-title" id="judgmentsTitle_tab5">🧾 قائمة أحكام الوراثة</h3>
+        <div class="judgments-grid">
+          <div class="file-list-card">
+            <table class="file-table">
+              <thead>
+                <tr>
+                  <th style="width: 45%;">القضية / الملف</th>
+                  <th style="width: 55%;">الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="judgmentsContainer5"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="empty-state" id="emptyState5" style="display: none;"><div class="empty-state-icon">📭</div><div class="empty-state-title">جاري تحميل الفهرس من السحابة...</div></div>
+      </div>
+    </main>
+
+    <!-- Tab 6 -->
+    <main class="main-content" id="tab6">
+      <div class="content-wrapper">
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-label">إجمالي النماذج</div><div class="stat-value" id="totalJudgments6">0</div></div>
+          <div class="stat-card"><div class="stat-label">نماذج مفضلة</div><div class="stat-value" id="favoritesCount6">0</div></div>
+        </div>
+        <div class="court-info">
+          <h2>ℹ️ معلومات المحكمة</h2>
+          <div class="court-info-grid">
+            <div class="court-info-item"><div class="court-info-label">المحكمة</div><div class="court-info-value">محكمة القفر الابتدائية</div></div>
+            <div class="court-info-item"><div class="court-info-label">رئيس المحكمة</div><div class="court-info-value">القاضي صدام علي علي الحنظلي</div></div>
+          </div>
+        </div>
+        <div class="filters-section">
+          <div class="filters-title">🔽 فلترة النماذج</div>
+          <div class="filters-grid">
+            <button class="filter-btn active" data-filter="all" onclick="setFilter('all', 'tab6')">جميع النماذج</button>
+            <button class="filter-btn" data-filter="favorites" onclick="setFilter('favorites', 'tab6')">⭐ المفضلة</button>
+            <button class="filter-btn" data-filter="rated" onclick="setFilter('rated', 'tab6')">📊 المقيمة</button>
+          </div>
+        </div>
+        <h3 class="judgments-title" id="judgmentsTitle_tab6">🏛️ قائمة نماذج المحكمة</h3>
+        <div class="judgments-grid">
+          <div class="file-list-card">
+            <table class="file-table">
+              <thead>
+                <tr>
+                  <th style="width: 45%;">القضية / الملف</th>
+                  <th style="width: 55%;">الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="judgmentsContainer6"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="empty-state" id="emptyState6" style="display: none;"><div class="empty-state-icon">📭</div><div class="empty-state-title">جاري تحميل الفهرس من السحابة...</div></div>
+      </div>
+    </main>
+
+    <!-- Tab 7 -->
+    <main class="main-content" id="tab7">
+      <div class="content-wrapper">
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-label">إجمالي الملخصات</div><div class="stat-value" id="totalJudgments7">0</div></div>
+          <div class="stat-card"><div class="stat-label">ملخصات مفضلة</div><div class="stat-value" id="favoritesCount7">0</div></div>
+        </div>
+        <div class="court-info">
+          <h2>ℹ️ معلومات المحكمة</h2>
+          <div class="court-info-grid">
+            <div class="court-info-item"><div class="court-info-label">المحكمة</div><div class="court-info-value">محكمة القفر الابتدائية</div></div>
+            <div class="court-info-item"><div class="court-info-label">رئيس المحكمة</div><div class="court-info-value">القاضي صدام علي علي الحنظلي</div></div>
+          </div>
+        </div>
+        <div class="filters-section">
+          <div class="filters-title">🔽 فلترة الملخصات</div>
+          <div class="filters-grid">
+            <button class="filter-btn active" data-filter="all" onclick="setFilter('all', 'tab7')">جميع الملخصات</button>
+            <button class="filter-btn" data-filter="favorites" onclick="setFilter('favorites', 'tab7')">⭐ المفضلة</button>
+            <button class="filter-btn" data-filter="rated" onclick="setFilter('rated', 'tab7')">📊 المقيمة</button>
+          </div>
+        </div>
+        <h3 class="judgments-title" id="judgmentsTitle_tab7">📚 قائمة الملخصات</h3>
+        <div class="judgments-grid">
+          <div class="file-list-card">
+            <table class="file-table">
+              <thead>
+                <tr>
+                  <th style="width: 45%;">القضية / الملف</th>
+                  <th style="width: 55%;">الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="judgmentsContainer7"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="empty-state" id="emptyState7" style="display: none;"><div class="empty-state-icon">📭</div><div class="empty-state-title">جاري تحميل الفهرس من السحابة...</div></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Viewer Modal -->
+  <div class="viewer-modal" id="viewerModal">
+    <div class="viewer-header viewer-header-extended">
+      <div class="viewer-heading-group">
+        <div class="viewer-title" id="viewerTitle">عرض الحكم</div>
+        <div class="viewer-subtitle" id="viewerSubtitle">عرض داخلي واضح للملفات المدعومة مع خيارات تنزيل وفتح خارجي.</div>
+      </div>
+      <div class="viewer-toolbar">
+        <button class="viewer-action-btn viewer-action-primary" id="viewerDownloadBtn" onclick="downloadCurrentViewedFile()">📥 تنزيل</button>
+        <button class="viewer-action-btn" id="viewerPrintBtn" onclick="printCurrentPdf()">🖨️ طباعة</button>
+        <button class="viewer-action-btn" id="viewerExternalBtn" onclick="openCurrentViewedExternally()">🌐 فتح خارجي</button>
+        <button class="viewer-action-btn" id="viewerReloadBtn" onclick="reloadCurrentViewer()">🔄 إعادة تحميل</button>
+        <button class="viewer-btn-close" onclick="closeViewer()">إغلاق</button>
+      </div>
+    </div>
+    <div class="viewer-content viewer-content-enhanced" id="viewerContent">
+      <iframe id="pdfFrame" src="" allow="fullscreen"></iframe>
+      <div id="officeViewer" style="display:none;width:100%;height:100%;overflow:auto;background:#f8fafc;"></div>
+    </div>
+  </div>
+
+  <!-- Open Options Modal -->
+  <div class="open-options-modal" id="openOptionsModal" onclick="if(event.target.id==='openOptionsModal'){closeOpenOptions();}">
+    <div class="open-options-card" onclick="event.stopPropagation();">
+      <div class="open-options-title" id="openOptionsTitle">فتح الحكم</div>
+      <div class="open-options-subtitle">اختر طريقة الفتح: داخل التطبيق أو عبر تطبيق خارجي للملفات المدعومة (PDF / DOCX / XLSX).</div>
+      <div class="open-options-actions">
+        <button id="openInternalBtn" class="open-options-btn open-options-btn-internal" onclick="openInternalFromOptions()">🔒 فتح داخل التطبيق</button>
+        <button id="openExternalBtn" class="open-options-btn open-options-btn-external" onclick="openExternalFromOptions()">🌐 فتح بتطبيق خارجي</button>
+      </div>
+      <button class="open-options-cancel" onclick="closeOpenOptions()">إلغاء</button>
+    </div>
+  </div>
+
+  <!-- Download Progress Overlay -->
+  <div class="download-progress-overlay" id="downloadOverlay">
+    <div id="downloadStatus">جاري تحميل الملف من السحابة...</div>
+    <div class="progress-container"><div class="progress-bar" id="progressBar"></div></div>
+  </div>
+
+  <!-- ===== ADMIN PANEL ===== -->
+  <div id="adminPanel" onclick="if(event.target.id==='adminPanel'){closeAdminPanel();}">
+    <div class="admin-panel-card" onclick="event.stopPropagation();">
+      <div class="admin-panel-header">
+        <h2>⚙️ إدارة المستخدمين</h2>
+        <button class="admin-panel-close" id="adminCloseBtn">✕</button>
+      </div>
+      <div class="admin-panel-body">
+
+        <!-- Create User -->
+        <div class="admin-section-title">➕ إنشاء مستخدم جديد</div>
+        <div class="admin-form">
+          <div class="admin-field">
+            <label>اسم المستخدم (للدخول)</label>
+            <input type="text" id="newUsername" placeholder="مثال: user123" autocomplete="off">
+          </div>
+          <div class="admin-field">
+            <label>كلمة المرور</label>
+            <input type="password" id="newPassword" placeholder="كلمة المرور">
+          </div>
+          <div class="admin-field">
+            <label>الاسم الظاهر (اختياري)</label>
+            <input type="text" id="newDisplayName" placeholder="مثال: أحمد محمد">
+          </div>
+          <div class="admin-field">
+            <label>الصلاحيات</label>
+            <div class="perm-group">
+              <label class="perm-item">
+                <input type="checkbox" id="perm-internal" checked>
+                <span>🔒 فتح داخلي</span>
+              </label>
+              <label class="perm-item">
+                <input type="checkbox" id="perm-external" checked>
+                <span>🌐 فتح خارجي</span>
+              </label>
+              <label class="perm-item">
+                <input type="checkbox" id="perm-download" checked>
+                <span>📥 تنزيل</span>
+              </label>
+            </div>
+            <div style="margin-top:10px;font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:6px;">📋 صلاحيات الأقسام</div>
+            <div class="perm-group">
+              <label class="perm-item">
+                <input type="checkbox" id="perm-tab1" checked>
+                <span>⚡ أحكام مستعجلة</span>
+              </label>
+              <label class="perm-item">
+                <input type="checkbox" id="perm-tab2" checked>
+                <span>📜 قضايا مدنية</span>
+              </label>
+              <label class="perm-item">
+                <input type="checkbox" id="perm-tab3" checked>
+                <span>👤 أحكام شخصية</span>
+              </label>
+              <label class="perm-item">
+                <input type="checkbox" id="perm-tab4" checked>
+                <span>⚖️ أحكام جزائية</span>
+              </label>
+              <label class="perm-item">
+                <input type="checkbox" id="perm-tab5" checked>
+                <span>🧾 أحكام الوراثة</span>
+              </label>
+              <label class="perm-item">
+                <input type="checkbox" id="perm-tab6" checked>
+                <span>🏛️ نماذج المحكمة</span>
+              </label>
+              <label class="perm-item">
+                <input type="checkbox" id="perm-tab7" checked>
+                <span>📚 الملخصات</span>
+              </label>
+            </div>
+          </div>
+          <button class="admin-create-btn" id="createUserBtn">✅ إنشاء المستخدم</button>
+          <div class="admin-form-note">بعد إنشاء المستخدم، يمكن للمدير تعديل الصلاحيات أو الإيقاف المؤقت أو تعديل اسم المستخدم وكلمة المرور والاسم الظاهر، وكذلك حذف الحساب عند الحاجة.</div>
+          <div id="adminMessage" class="admin-message"></div>
+        </div>
+
+        <!-- Users List -->
+        <div class="admin-section-title">👥 قائمة المستخدمين</div>
+        <div class="admin-user-list" id="adminUserList">
+          <!-- Filled by JS -->
+        </div>
+
+        <div class="admin-edit-card" id="editUserCard">
+          <div class="admin-edit-title">✏️ تعديل بيانات المستخدم وصلاحياته</div>
+          <div class="admin-edit-subtitle">يمكنك من هنا تعديل الاسم الظاهر واسم المستخدم وكلمة المرور والصلاحيات وحالة الحساب.</div>
+          <div class="admin-readonly-box">
+            <div class="admin-readonly-name" id="editUserDisplayName">-</div>
+            <div class="admin-readonly-username" id="editUserUsername">-</div>
+          </div>
+          <div class="admin-field">
+            <label>الاسم الظاهر</label>
+            <input type="text" id="editDisplayName" placeholder="الاسم الظاهر للمستخدم">
+          </div>
+          <div class="admin-field">
+            <label>اسم المستخدم</label>
+            <input type="text" id="editUsername" placeholder="اسم المستخدم">
+          </div>
+          <div class="admin-field">
+            <label>كلمة المرور</label>
+            <input type="password" id="editPassword" placeholder="كلمة المرور">
+          </div>
+          <div class="admin-field">
+            <label>الصلاحيات</label>
+            <div class="perm-group">
+              <label class="perm-item">
+                <input type="checkbox" id="edit-perm-internal">
+                <span>🔒 فتح داخلي</span>
+              </label>
+              <label class="perm-item">
+                <input type="checkbox" id="edit-perm-external">
+                <span>🌐 فتح خارجي</span>
+              </label>
+              <label class="perm-item">
+                <input type="checkbox" id="edit-perm-download">
+                <span>📥 تنزيل</span>
+              </label>
+            </div>
+            <div style="margin-top:10px;font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:6px;">📋 صلاحيات الأقسام</div>
+            <div class="perm-group">
+              <label class="perm-item">
+                <input type="checkbox" id="edit-perm-tab1">
+                <span>⚡ أحكام مستعجلة</span>
+              </label>
+              <label class="perm-item">
+                <input type="checkbox" id="edit-perm-tab2">
+                <span>📜 قضايا مدنية</span>
+              </label>
+              <label class="perm-item">
+                <input type="checkbox" id="edit-perm-tab3">
+                <span>👤 أحكام شخصية</span>
+              </label>
+              <label class="perm-item">
+                <input type="checkbox" id="edit-perm-tab4">
+                <span>⚖️ أحكام جزائية</span>
+              </label>
+              <label class="perm-item">
+                <input type="checkbox" id="edit-perm-tab5">
+                <span>🧾 أحكام الوراثة</span>
+              </label>
+              <label class="perm-item">
+                <input type="checkbox" id="edit-perm-tab6">
+                <span>🏛️ نماذج المحكمة</span>
+              </label>
+              <label class="perm-item">
+                <input type="checkbox" id="edit-perm-tab7">
+                <span>📚 الملخصات</span>
+              </label>
+            </div>
+          </div>
+          <div class="admin-field">
+            <label>الحالة</label>
+            <label class="perm-item">
+              <input type="checkbox" id="editUserSuspended">
+              <span>⏸️ إيقاف المستخدم مؤقتاً</span>
+            </label>
+          </div>
+          <div class="admin-edit-note">يمكنك الحفظ بدون تغيير أي جزء آخر، كما يمكنك حذف الحساب نهائياً من الأزرار بالأسفل.</div>
+          <div class="admin-edit-actions">
+            <button class="admin-save-btn" onclick="saveUserEdits()">💾 حفظ التعديلات</button>
+            <button class="admin-delete-btn" onclick="deleteEditingUser()">🗑️ حذف الحساب</button>
+            <button class="admin-cancel-btn" onclick="closeUserEditor()">إلغاء</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    </div>
+  </div>
+
+  <div id="sourceCodeEditorPanel" onclick="if(event.target.id==='sourceCodeEditorPanel'){closeSourceCodeEditorPanel();}">
+    <div class="source-editor-card">
+      <div class="source-editor-header">
+        <h2>🧩 محرر صفحة HTML كاملة</h2>
+        <button class="source-editor-close" id="sourceCodeEditorCloseBtn">✕</button>
+      </div>
+      <div class="source-editor-body">
+        <div class="source-editor-note">يمكن للمدير تعديل صفحة HTML الكاملة مباشرةً من داخل التطبيق، ويتم حفظها محلياً على هذا الجهاز ثم تطبيقها بعد إعادة تحميل التطبيق. احرص على الإبقاء على الوسوم والمعرفات والملفات البرمجية الأساسية حتى لا تتعطل وظائف التطبيق.</div>
+        <div id="sourceEditorMeta" class="source-editor-meta"></div>
+        <textarea id="sourceCodeTextarea" class="source-editor-textarea" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
+        <div class="source-editor-actions">
+          <button class="admin-save-btn" id="saveSourceCodeBtn">💾 حفظ الصفحة محلياً</button>
+          <button class="admin-action-btn" id="resetSourceCodeBtn">↺ استعادة الكود الأصلي</button>
+          <button class="admin-cancel-btn" id="cancelSourceCodeBtn">إلغاء</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <script src="js/megajs.browser.js"></script>
+  <script src="js/mammoth.browser.min.js"></script>
+  <script src="js/xlsx.full.min.js"></script>
+  <script src="js/cloud-data.js"></script>
+  <script src="js/server-config.js"></script>
+  <script>
+    (function () {
+      try {
+        var root = document.getElementById('sourceEditableRoot');
+        if (!root) return;
+        function simpleHash(text) {
+          var hash = 0;
+          for (var i = 0; i < text.length; i++) {
+            hash = ((hash << 5) - hash) + text.charCodeAt(i);
+            hash |= 0;
+          }
+          return String(hash);
+        }
+        window.__DEFAULT_SOURCE_HTML__ = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+        var raw = localStorage.getItem('cloudAppUiConfig.v1');
+        var parsed = raw ? JSON.parse(raw) : null;
+        var sourceHtml = parsed && parsed.sourceEditor && typeof parsed.sourceEditor.appShellHtml === 'string'
+          ? parsed.sourceEditor.appShellHtml
+          : '';
+        if (sourceHtml && sourceHtml.trim()) {
+          var sourceHash = simpleHash(sourceHtml);
+          var sessionKey = 'cloudAppAppliedFullHtmlHash';
+          if (sessionStorage.getItem(sessionKey) !== sourceHash) {
+            sessionStorage.setItem(sessionKey, sourceHash);
+            document.open();
+            document.write(sourceHtml);
+            document.close();
+            return;
+          }
+        } else {
+          sessionStorage.removeItem('cloudAppAppliedFullHtmlHash');
+        }
+      } catch (e) {}
+    })();
+  </script>
+  <script src="js/app.js"></script>
+  <script src="js/enhancements.js"></script>
+  <script src="js/alfred-upgrade.js"></script>
+</body>
+</html>
