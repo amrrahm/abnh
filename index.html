@@ -572,6 +572,51 @@
     .admin-cancel-btn:hover { background: var(--card-hover); color: var(--text); }
     .admin-form-note { font-size: 12px; color: var(--text-muted); margin-top: 10px; line-height: 1.7; }
 
+    .message-btn { background: linear-gradient(135deg, #0ea5e9, #2563eb); color: #fff; border: none; border-radius: 14px; padding: 10px 16px; font-family: var(--font); font-weight: 800; cursor: pointer; box-shadow: 0 12px 28px rgba(37,99,235,0.24); display: inline-flex; align-items: center; gap: 8px; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+    .message-btn:hover { transform: translateY(-1px); box-shadow: 0 16px 36px rgba(37,99,235,0.32); }
+    .messaging-panel { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.66); z-index: 3300; display: none; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(5px); }
+    .messaging-panel.active { display: flex; }
+    .messaging-card { width: min(1180px, 100%); max-height: 92vh; background: var(--surface); border-radius: 24px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 24px 60px rgba(0,0,0,0.35); }
+    .messaging-header { background: linear-gradient(135deg, #1d4ed8, #2563eb); color: #fff; padding: 20px 22px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .messaging-header h2 { margin: 0; font-size: 20px; font-weight: 900; }
+    .messaging-subtitle { margin-top: 4px; font-size: 13px; opacity: 0.92; font-weight: 700; }
+    .messaging-close { background: rgba(255,255,255,0.2); border: none; color: #fff; width: 38px; height: 38px; border-radius: 50%; font-size: 18px; cursor: pointer; }
+    .messaging-body { display: grid; grid-template-columns: minmax(250px, 320px) 1fr; min-height: 62vh; max-height: calc(92vh - 78px); }
+    .messaging-conversations { border-inline-start: 1px solid var(--border); background: linear-gradient(180deg, rgba(37,99,235,0.05), rgba(37,99,235,0.01)); overflow: auto; padding: 12px; }
+    .messaging-conversation-item { width: 100%; border: 1px solid var(--border); background: var(--surface); border-radius: 16px; padding: 14px; margin-bottom: 10px; text-align: right; cursor: pointer; transition: all 0.2s ease; }
+    .messaging-conversation-item:hover, .messaging-conversation-item.active { border-color: rgba(37,99,235,0.45); box-shadow: 0 10px 24px rgba(37,99,235,0.14); transform: translateY(-1px); }
+    .messaging-conversation-name { font-size: 15px; font-weight: 900; color: var(--text); }
+    .messaging-conversation-meta { font-size: 12px; color: var(--text-muted); margin-top: 6px; line-height: 1.7; }
+    .messaging-chat-area { display: flex; flex-direction: column; min-width: 0; }
+    .messaging-thread { flex: 1; overflow: auto; padding: 18px; background: linear-gradient(180deg, rgba(99,102,241,0.05), rgba(248,250,252,0.2)); display: flex; flex-direction: column; gap: 12px; }
+    .messaging-empty { display: flex; align-items: center; justify-content: center; text-align: center; min-height: 220px; padding: 24px; color: var(--text-muted); font-weight: 800; }
+    .message-bubble { max-width: min(78%, 520px); padding: 12px 14px; border-radius: 18px; box-shadow: var(--shadow-card); line-height: 1.8; word-break: break-word; }
+    .message-bubble.mine { align-self: flex-start; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #fff; border-bottom-left-radius: 6px; }
+    .message-bubble.theirs { align-self: flex-end; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-bottom-right-radius: 6px; }
+    .message-meta { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 800; opacity: 0.86; margin-bottom: 6px; }
+    .message-text { font-size: 14px; white-space: pre-wrap; }
+    .messaging-compose { border-top: 1px solid var(--border); padding: 14px 16px; background: var(--surface); }
+    .messaging-permission-hint { background: rgba(245,158,11,0.12); color: #92400e; border: 1px solid rgba(245,158,11,0.24); border-radius: 14px; padding: 10px 12px; margin-bottom: 10px; font-size: 13px; font-weight: 800; }
+    .messaging-input { width: 100%; min-height: 110px; max-height: 180px; border: 2px solid var(--border); border-radius: 18px; padding: 14px; resize: vertical; font-family: var(--font); font-size: 14px; background: var(--surface); color: var(--text); outline: none; }
+    .messaging-input:focus { border-color: #2563eb; box-shadow: 0 0 0 4px rgba(37,99,235,0.10); }
+    .messaging-compose-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; }
+    .messaging-status { min-height: 20px; font-size: 12px; font-weight: 800; color: var(--text-muted); }
+    .messaging-send { background: linear-gradient(135deg, #10b981, #059669); color: #fff; border: none; border-radius: 14px; padding: 11px 18px; font-family: var(--font); font-weight: 900; cursor: pointer; }
+    .messaging-send:disabled { opacity: 0.5; cursor: not-allowed; }
+    .messaging-empty-list { padding: 18px; text-align: center; color: var(--text-muted); font-weight: 800; }
+    @media (max-width: 920px) {
+      .messaging-body { grid-template-columns: 1fr; }
+      .messaging-conversations { border-inline-start: none; border-bottom: 1px solid var(--border); max-height: 220px; }
+    }
+    @media (max-width: 640px) {
+      .messaging-panel { padding: 10px; }
+      .messaging-card { max-height: 96vh; border-radius: 18px; }
+      .messaging-header { padding: 16px; }
+      .messaging-thread { padding: 14px; }
+      .message-bubble { max-width: 90%; }
+      .messaging-compose-actions { flex-direction: column; align-items: stretch; }
+      .messaging-send { width: 100%; }
+    }
     /* ===== STRICT VISUAL LOCKDOWN FOR NON-GENERAL USERS ===== */
     body.restricted-user-mode #adminPanelBtn,
     body.restricted-user-mode #adminPanel,
@@ -662,6 +707,7 @@
           <div class="header-controls">
             <div id="connectionStatus" class="connection-status"><span>🌐</span> متصل</div>
             <span id="currentUserInfo" class="current-user-info"></span>
+            <button class="message-btn" id="messagingBtn" style="display:none;" title="المراسلات">💬 المراسلات</button>
             <button class="sync-btn" id="permissionSyncBtn" style="display:none;" title="تحديث صلاحيات المستخدم من الخادم المركزي فقط">🔐 تحديث الصلاحيات</button>
             <button class="sync-btn" id="fullSyncBtn" style="display:none;" title="مزامنة كاملة للصلاحيات والملفات من الخادم المركزي">🔄 مزامنة كاملة</button>
                         <button class="admin-btn" id="sourceCodeEditorBtn" style="display:none;" title="تحرير صفحة HTML كاملة">🧩 محرر صفحة HTML</button>
@@ -689,6 +735,7 @@
               <a href="#" class="menu-item" id="menuFullSync" data-target="fullSyncBtn"><span class="icon-dot"></span>مزامنة كاملة</a>
                             <a href="#" class="menu-item" id="menuSourceEditor" data-target="sourceCodeEditorBtn"><span class="icon-dot"></span>محرر صفحة HTML</a>
               <a href="#" class="menu-item" id="menuUsers" data-target="adminPanelBtn"><span class="icon-dot"></span>المستخدمون</a>
+              <a href="#" class="menu-item" id="menuMessages" data-target="messagingBtn"><span class="icon-dot"></span>المراسلات</a>
               <a href="#" class="menu-item" id="menuThemeToggle" data-target="themeToggle"><span class="icon-dot"></span><span id="menuThemeLabel">الوضع الليلي</span></a>
               <div class="divider"></div>
               <a href="#" class="menu-item logout-item" id="menuLogout" data-target="logoutBtn">🚪 تسجيل الخروج</a>
@@ -962,7 +1009,7 @@
     <main class="main-content" id="tab6">
       <div class="content-wrapper">
         <div class="stats-grid">
-          <div class="stat-card"><div class="stat-label">إجمالي المستودع</div><div class="stat-value" id="totalJudgments6">0</div></div>
+          <div class="stat-card"><div class="stat-label">إجمالي النماذج</div><div class="stat-value" id="totalJudgments6">0</div></div>
           <div class="stat-card"><div class="stat-label">نماذج مفضلة</div><div class="stat-value" id="favoritesCount6">0</div></div>
         </div>
         <div class="court-info">
@@ -1079,6 +1126,33 @@
     <div class="progress-container"><div class="progress-bar" id="progressBar"></div></div>
   </div>
 
+  <div id="messagingPanel" class="messaging-panel" onclick="if(event.target.id==='messagingPanel'){closeMessagingPanel();}">
+    <div class="messaging-card" onclick="event.stopPropagation();">
+      <div class="messaging-header">
+        <div>
+          <h2 id="messagingTitle">💬 المراسلات</h2>
+          <div class="messaging-subtitle" id="messagingSubtitle">تواصل مباشر بين المدير والمستخدمين داخل التطبيق.</div>
+        </div>
+        <button class="messaging-close" id="messagingCloseBtn">✕</button>
+      </div>
+      <div class="messaging-body">
+        <div class="messaging-conversations" id="messagingUsersList"></div>
+        <div class="messaging-chat-area">
+          <div class="messaging-empty" id="messagingEmptyState">اختر محادثة لعرض الرسائل وبدء المراسلة.</div>
+          <div class="messaging-thread" id="messagingThread" style="display:none;"></div>
+          <div class="messaging-compose">
+            <div class="messaging-permission-hint" id="messagingPermissionHint" style="display:none;">المدير لم يفعّل لك صلاحية إرسال الرسائل بعد. يمكنك استقبال الرسائل فقط حالياً.</div>
+            <textarea id="messageInput" class="messaging-input" placeholder="اكتب رسالتك هنا"></textarea>
+            <div class="messaging-compose-actions">
+              <div class="messaging-status" id="messagingStatus"></div>
+              <button class="messaging-send" id="sendMessageBtn">إرسال</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== ADMIN PANEL ===== -->
   <div id="adminPanel" onclick="if(event.target.id==='adminPanel'){closeAdminPanel();}">
     <div class="admin-panel-card" onclick="event.stopPropagation();">
@@ -1117,6 +1191,10 @@
               <label class="perm-item">
                 <input type="checkbox" id="perm-download" checked>
                 <span>📥 تنزيل</span>
+              </label>
+              <label class="perm-item">
+                <input type="checkbox" id="perm-message">
+                <span>💬 السماح بمراسلة المدير</span>
               </label>
             </div>
             <div style="margin-top:10px;font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:6px;">📋 صلاحيات الأقسام</div>
@@ -1195,6 +1273,10 @@
               <label class="perm-item">
                 <input type="checkbox" id="edit-perm-download">
                 <span>📥 تنزيل</span>
+              </label>
+              <label class="perm-item">
+                <input type="checkbox" id="edit-perm-message">
+                <span>💬 السماح بمراسلة المدير</span>
               </label>
             </div>
             <div style="margin-top:10px;font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:6px;">📋 صلاحيات الأقسام</div>
@@ -1312,5 +1394,6 @@
   <script src="js/app.js"></script>
   <script src="js/enhancements.js"></script>
   <script src="js/alfred-upgrade.js"></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
