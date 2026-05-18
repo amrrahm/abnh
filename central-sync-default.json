@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 4,
+  "updatedAt": "2026-04-08T12:50:00Z",
+  "users": {
+    "770428514": {
+      "username": "770428514",
+      "password": "8514",
+      "displayName": "المدير",
+      "isAdmin": true,
+      "isSuspended": false,
+      "canOpenInternal": true,
+      "canOpenExternal": true,
+      "canDownload": true,
+      "canViewTab1": true,
+      "canViewTab2": true,
+      "canViewTab3": true,
+      "canViewTab4": true,
+      "canViewTab5": true,
+      "canViewTab6": true,
+      "canViewTab7": true
+    }
+  },
+  "deletedUsers": {},
+  "uiConfig": {
+    "appTitle": "بيانات محكمة القفر الابتدائية",
+    "tabs": {
+      "tab1": {"label": "الأحكام المستعجلة", "subtitle": "مدونة الأحكام القضائية للقضايا المستعجلة للعام 1447هـ"},
+      "tab2": {"label": "القضايا المدنية", "subtitle": "مدونة الأحكام القضائية للقضايا المدنية للعام 1447هـ"},
+      "tab3": {"label": "الأحكام الشخصية", "subtitle": "مدونة الأحكام القضائية للأحكام الشخصية للعام 1447هـ"},
+      "tab4": {"label": "الأحكام الجزائية", "subtitle": "مدونة الأحكام القضائية للأحكام الجزائية للعام 1447هـ"},
+      "tab5": {"label": "أحكام الوراثة", "subtitle": "مدونة أحكام الوراثة للعام 1447هـ"},
+      "tab6": {"label": "نماذج المحكمة", "subtitle": "مدونة نماذج المحكمة الرسمية للعام 1447هـ"},
+      "tab7": {"label": "القوانين", "subtitle": "مدونة القوانين والأنظمة القضائية للعام 1447هـ"}
+    }
+  },
+  "sharedFiles": {},
+  "fileOverrides": {}
+}
