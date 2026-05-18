@@ -1,0 +1,4078 @@
+(function () {
+  'use strict';
+
+  var BOOT = window.CLOUD_BOOTSTRAP || {};
+  var FOLDERS = BOOT.folders || {};
+  var BUNDLED = (BOOT.bundledManifest && BOOT.bundledManifest.categories) || {};
+
+  var TAB_META = {
+    tab1: { category: 'urgent', label: 'الأحكام المستعجلة', subtitle: 'مدونة الأحكام القضائية للقضايا المستعجلة للعام 1447هـ', permKey: 'canViewTab1' },
+    tab2: { category: 'civil', label: 'القضايا المدنية', subtitle: 'مدونة الأحكام القضائية للقضايا المدنية للعام 1447هـ', permKey: 'canViewTab2' },
+    tab3: { category: 'personal', label: 'الأحكام الشخصية', subtitle: 'مدونة الأحكام القضائية للأحكام الشخصية للعام 1447هـ', permKey: 'canViewTab3' },
+    tab4: { category: 'criminal', label: 'الأحكام الجزائية', subtitle: 'مدونة الأحكام القضائية للأحكام الجزائية للعام 1447هـ', permKey: 'canViewTab4' },
+    tab5: { category: 'inheritance', label: 'أحكام الوراثة', subtitle: 'مدونة أحكام الوراثة للعام 1447هـ', permKey: 'canViewTab5' },
+    tab6: { category: 'courtmodels', label: 'نماذج المحكمة', subtitle: 'مدونة نماذج المحكمة الرسمية للعام 1447هـ', permKey: 'canViewTab6' },
+    tab7: { category: 'laws', label: 'الملخصات', subtitle: 'مدونة الملخصات والأنظمة القضائية للعام 1447هـ', permKey: 'canViewTab7' }
+  };
+  var TAB_IDS = Object.keys(TAB_META);
+
+  var STORAGE_KEYS = {
+    favorites: 'cloudAppFavorites.v1',
+    ratings: 'cloudAppRatings.v1',
+    cache: 'cloudAppSyncedItems.v1',
+    downloaded: 'cloudAppDownloadedFiles.v1',
+    theme: 'theme',
+    auth: 'cloudAppAuth.v1',
+    users: 'cloudAppUsers.v3',
+    uiConfig: 'cloudAppUiConfig.v1',
+    currentUserSnapshot: 'cloudAppCurrentUserSnapshot.v1',
+    serverConfigOverride: 'cloudAppServerConfigOverride.v1'
+  };
+
+  // Centralized permissions backend with resilient fallback config
+  var SERVER_CONFIG = window.SERVER_CONFIG || {};
+  var BUNDLED_SERVER_CONFIG = {
+    centralSyncUrls: Array.isArray(SERVER_CONFIG.centralSyncUrls) ? SERVER_CONFIG.centralSyncUrls.slice() : [],
+    localFallbackPath: SERVER_CONFIG.localFallbackPath || 'data/central-sync-default.json',
+    cacheStorageKey: SERVER_CONFIG.cacheStorageKey || 'cloudAppCentralSnapshotCache.v1'
+  };
+  var CENTRAL_SYNC = {
+    urls: BUNDLED_SERVER_CONFIG.centralSyncUrls.slice(),
+    localFallbackPath: BUNDLED_SERVER_CONFIG.localFallbackPath,
+    cacheStorageKey: BUNDLED_SERVER_CONFIG.cacheStorageKey,
+    syncIntervalMs: 5000,
+    suspendedPollMs: 2000
+  };
+
+  var DEFAULT_UI_CONFIG = {
+    appTitle: 'بيانات محكمة القفر الابتدائية',
+    tabs: {
+      tab1: { label: 'الأحكام المستعجلة', subtitle: 'مدونة الأحكام القضائية للقضايا المستعجلة للعام 1447هـ - واجهة محسّنة لعرض الأحكام والملفات القضائية بوضوح' },
+      tab2: { label: 'القضايا المدنية', subtitle: 'مدونة الأحكام القضائية للقضايا المدنية للعام 1447هـ - واجهة محسّنة لعرض الأحكام والملفات القضائية بوضوح' },
+      tab3: { label: 'الأحكام الشخصية', subtitle: 'مدونة الأحكام القضائية للأحكام الشخصية للعام 1447هـ - واجهة محسّنة لعرض الأحكام والملفات القضائية بوضوح' },
+      tab4: { label: 'الأحكام الجزائية', subtitle: 'مدونة الأحكام القضائية للأحكام الجزائية للعام 1447هـ - واجهة محسّنة لعرض الأحكام والملفات القضائية بوضوح' },
+      tab5: { label: 'أحكام الوراثة', subtitle: 'مدونة أحكام الوراثة للعام 1447هـ - واجهة محسّنة لعرض الأحكام والملفات القضائية بوضوح' },
+      tab6: { label: 'نماذج المحكمة', subtitle: 'مدونة نماذج المحكمة الرسمية للعام 1447هـ - واجهة محسّنة لعرض الأحكام والملفات القضائية بوضوح' },
+      tab7: { label: 'الملخصات', subtitle: 'مدونة الملخصات والأنظمة القضائية للعام 1447هـ - واجهة محسّنة لعرض الأحكام والملفات القضائية بوضوح' }
+    },
+    sourceEditor: {
+      appShellHtml: '',
+      updatedAt: '',
+      updatedBy: ''
+    }
+  };
+
+  function deepClone(value) {
+    return JSON.parse(JSON.stringify(value));
+  }
+
+  function normalizeUiConfig(uiConfig) {
+    var normalized = deepClone(DEFAULT_UI_CONFIG);
+    var raw = uiConfig && typeof uiConfig === 'object' ? uiConfig : {};
+    if (typeof raw.appTitle === 'string' && raw.appTitle.trim()) {
+      normalized.appTitle = raw.appTitle.trim();
+    }
+    TAB_IDS.forEach(function(tabId) {
+      var rawTab = raw.tabs && raw.tabs[tabId] ? raw.tabs[tabId] : {};
+      if (typeof rawTab.label === 'string' && rawTab.label.trim()) {
+        normalized.tabs[tabId].label = rawTab.label.trim();
+      }
+      if (typeof rawTab.subtitle === 'string' && rawTab.subtitle.trim()) {
+        normalized.tabs[tabId].subtitle = rawTab.subtitle.trim();
+      }
+    });
+    var rawSourceEditor = raw.sourceEditor && typeof raw.sourceEditor === 'object' ? raw.sourceEditor : {};
+    normalized.sourceEditor = {
+      appShellHtml: typeof rawSourceEditor.appShellHtml === 'string' ? rawSourceEditor.appShellHtml : '',
+      updatedAt: rawSourceEditor.updatedAt || '',
+      updatedBy: String(rawSourceEditor.updatedBy || '').trim()
+    };
+    return normalized;
+  }
+
+  function getStoredUiConfig() {
+    return normalizeUiConfig(parseJSON(localStorage.getItem(STORAGE_KEYS.uiConfig) || '{}', {}));
+  }
+
+  function saveUiConfigLocal(uiConfig) {
+    try {
+      localStorage.setItem(STORAGE_KEYS.uiConfig, JSON.stringify(normalizeUiConfig(uiConfig)));
+    } catch (e) {}
+  }
+
+  function updatePermissionLabelTexts() {
+    var icons = { tab1: '⚡', tab2: '📜', tab3: '👤', tab4: '⚖️', tab5: '🧾', tab6: '🏛️', tab7: '📚' };
+    TAB_IDS.forEach(function(tabId) {
+      ['perm-' + tabId, 'edit-perm-' + tabId].forEach(function(inputId) {
+        var input = document.getElementById(inputId);
+        var labelSpan = input && input.nextElementSibling ? input.nextElementSibling : null;
+        if (labelSpan) {
+          labelSpan.textContent = (icons[tabId] || '📂') + ' ' + TAB_META[tabId].label;
+        }
+      });
+    });
+  }
+
+  function updateJudgmentTitlesFromTabs() {
+    TAB_IDS.forEach(function(tabId) {
+      var titleEl = document.getElementById('judgmentsTitle_' + tabId);
+      if (titleEl) titleEl.textContent = '📋 قائمة ' + TAB_META[tabId].label;
+    });
+  }
+
+  function normalizeServerConfig(raw) {
+    var normalized = Object.assign({}, BUNDLED_SERVER_CONFIG, raw && typeof raw === 'object' ? raw : {});
+    var urls = Array.isArray(normalized.centralSyncUrls) ? normalized.centralSyncUrls : [];
+    urls = urls.map(function(url) { return String(url || '').trim(); }).filter(function(url) { return !!url; });
+    normalized.centralSyncUrls = urls;
+    normalized.localFallbackPath = String(normalized.localFallbackPath || BUNDLED_SERVER_CONFIG.localFallbackPath || '').trim() || BUNDLED_SERVER_CONFIG.localFallbackPath;
+    normalized.cacheStorageKey = String(normalized.cacheStorageKey || BUNDLED_SERVER_CONFIG.cacheStorageKey || '').trim() || BUNDLED_SERVER_CONFIG.cacheStorageKey;
+    return normalized;
+  }
+
+  function getStoredServerConfigOverride() {
+    return parseJSON(localStorage.getItem(STORAGE_KEYS.serverConfigOverride) || 'null', null);
+  }
+
+  function getRuntimeServerConfig() {
+    return normalizeServerConfig(Object.assign({}, BUNDLED_SERVER_CONFIG, getStoredServerConfigOverride() || {}));
+  }
+
+  function applyRuntimeServerConfig(config) {
+    var normalized = normalizeServerConfig(config);
+    window.SERVER_CONFIG = {
+      centralSyncUrls: normalized.centralSyncUrls.slice(),
+      localFallbackPath: normalized.localFallbackPath,
+      cacheStorageKey: normalized.cacheStorageKey
+    };
+    CENTRAL_SYNC.urls = normalized.centralSyncUrls.slice();
+    CENTRAL_SYNC.localFallbackPath = normalized.localFallbackPath;
+    CENTRAL_SYNC.cacheStorageKey = normalized.cacheStorageKey;
+    return normalized;
+  }
+
+  applyRuntimeServerConfig(getRuntimeServerConfig());
+
+  function updateServerConfigMeta() {
+    var metaEl = document.getElementById('serverConfigMeta');
+    if (!metaEl) return;
+    var runtimeConfig = normalizeServerConfig(window.SERVER_CONFIG || BUNDLED_SERVER_CONFIG);
+    var override = getStoredServerConfigOverride();
+    var lines = [];
+    lines.push(override ? 'الحالة الحالية: يتم استخدام روابط خادم معدلة محلياً على هذا الجهاز فقط.' : 'الحالة الحالية: يتم استخدام روابط الخادم الأصلية المدمجة داخل التطبيق.');
+    lines.push('عدد روابط المزامنة الحالية: ' + runtimeConfig.centralSyncUrls.length);
+    lines.push('مسار fallback الحالي: ' + runtimeConfig.localFallbackPath);
+    lines.push('مفتاح التخزين المؤقت الحالي: ' + runtimeConfig.cacheStorageKey);
+    lines.push('يمكنك وضع رابط واحد في كل سطر ثم الحفظ لإعادة تشغيل التطبيق بالروابط الجديدة فوراً.');
+    metaEl.textContent = lines.join('\n');
+  }
+
+  function populateServerConfigEditorForm() {
+    var runtimeConfig = normalizeServerConfig(window.SERVER_CONFIG || BUNDLED_SERVER_CONFIG);
+    var urlsTextarea = document.getElementById('serverUrlsTextarea');
+    var fallbackInput = document.getElementById('serverFallbackPathInput');
+    var cacheKeyInput = document.getElementById('serverCacheKeyInput');
+    if (urlsTextarea) urlsTextarea.value = runtimeConfig.centralSyncUrls.join('\n');
+    if (fallbackInput) fallbackInput.value = runtimeConfig.localFallbackPath;
+    if (cacheKeyInput) cacheKeyInput.value = runtimeConfig.cacheStorageKey;
+    updateServerConfigMeta();
+  }
+
+  function showServerConfigEditorPanel() {
+    if (!requireGeneralAdmin()) return;
+    populateServerConfigEditorForm();
+    var panel = document.getElementById('serverConfigEditorPanel');
+    if (panel) panel.classList.add('active');
+  }
+
+  function closeServerConfigEditorPanel() {
+    var panel = document.getElementById('serverConfigEditorPanel');
+    if (panel) panel.classList.remove('active');
+  }
+
+  function saveServerConfigChanges() {
+    if (!requireGeneralAdmin()) return;
+    var urlsTextarea = document.getElementById('serverUrlsTextarea');
+    var fallbackInput = document.getElementById('serverFallbackPathInput');
+    var cacheKeyInput = document.getElementById('serverCacheKeyInput');
+    var urls = String(urlsTextarea && urlsTextarea.value || '').split(/\r?\n/).map(function(url) { return String(url || '').trim(); }).filter(function(url) { return !!url; });
+    if (!urls.length) {
+      alert('أدخل رابط مزامنة واحداً على الأقل، كل رابط في سطر مستقل.');
+      return;
+    }
+    var nextConfig = normalizeServerConfig({
+      centralSyncUrls: urls,
+      localFallbackPath: String(fallbackInput && fallbackInput.value || '').trim() || BUNDLED_SERVER_CONFIG.localFallbackPath,
+      cacheStorageKey: String(cacheKeyInput && cacheKeyInput.value || '').trim() || BUNDLED_SERVER_CONFIG.cacheStorageKey
+    });
+    try {
+      localStorage.setItem(STORAGE_KEYS.serverConfigOverride, JSON.stringify(nextConfig));
+      applyRuntimeServerConfig(nextConfig);
+      closeServerConfigEditorPanel();
+      alert('✅ تم حفظ روابط الخادم محلياً على هذا الجهاز. سيُعاد تحميل التطبيق الآن لاستخدام الروابط الجديدة.');
+      setTimeout(function() { window.location.reload(); }, 120);
+    } catch (err) {
+      console.error(err);
+      alert('❌ تعذر حفظ روابط الخادم محلياً على هذا الجهاز.');
+    }
+  }
+
+  function resetServerConfigOverride() {
+    if (!requireGeneralAdmin()) return;
+    if (!confirm('سيتم حذف التعديل المحلي والعودة إلى روابط الخادم الأصلية المدمجة داخل التطبيق. هل تريد المتابعة؟')) return;
+    try {
+      localStorage.removeItem(STORAGE_KEYS.serverConfigOverride);
+      applyRuntimeServerConfig(BUNDLED_SERVER_CONFIG);
+      closeServerConfigEditorPanel();
+      alert('✅ تم حذف التعديل المحلي والعودة إلى الروابط الأصلية. سيُعاد تحميل التطبيق الآن.');
+      setTimeout(function() { window.location.reload(); }, 120);
+    } catch (err) {
+      console.error(err);
+      alert('❌ تعذر حذف التعديل المحلي حالياً.');
+    }
+  }
+
+  function getSourceEditorConfig(uiConfig) {
+    return normalizeUiConfig(uiConfig || state.uiConfig || DEFAULT_UI_CONFIG).sourceEditor || { appShellHtml: '', updatedAt: '', updatedBy: '' };
+  }
+
+  function getEffectiveSourceEditorHtml(uiConfig) {
+    var sourceConfig = getSourceEditorConfig(uiConfig);
+    var customHtml = typeof sourceConfig.appShellHtml === 'string' ? sourceConfig.appShellHtml : '';
+    if (customHtml && customHtml.trim()) return customHtml;
+    return String(window.__DEFAULT_SOURCE_HTML__ || '');
+  }
+
+  function updateSourceEditorMeta(uiConfig) {
+    var metaEl = document.getElementById('sourceEditorMeta');
+    if (!metaEl) return;
+    var sourceConfig = getSourceEditorConfig(uiConfig);
+    var usingCustom = !!(sourceConfig.appShellHtml && sourceConfig.appShellHtml.trim());
+    var lines = [];
+    lines.push(usingCustom ? 'الحالة الحالية: يتم استخدام كود HTML مخصص محفوظ مركزياً.' : 'الحالة الحالية: يتم استخدام كود الواجهة الأصلي المدمج داخل التطبيق.');
+    if (sourceConfig.updatedBy) lines.push('آخر تعديل بواسطة: ' + sourceConfig.updatedBy);
+    if (sourceConfig.updatedAt) lines.push('وقت آخر تعديل: ' + sourceConfig.updatedAt);
+    lines.push('عند حفظ التعديلات سيتم تطبيقها على جميع المستخدمين بعد المزامنة.');
+    metaEl.textContent = lines.join('\n');
+  }
+
+  function populateSourceCodeEditorForm() {
+    var textarea = document.getElementById('sourceCodeTextarea');
+    if (!textarea) return;
+    textarea.value = getEffectiveSourceEditorHtml(state.uiConfig || DEFAULT_UI_CONFIG);
+    updateSourceEditorMeta(state.uiConfig || DEFAULT_UI_CONFIG);
+  }
+
+  function showSourceCodeEditorPanel() {
+    if (!requireGeneralAdmin()) return;
+    populateSourceCodeEditorForm();
+    var panel = document.getElementById('sourceCodeEditorPanel');
+    if (panel) panel.classList.add('active');
+  }
+
+  function closeSourceCodeEditorPanel() {
+    var panel = document.getElementById('sourceCodeEditorPanel');
+    if (panel) panel.classList.remove('active');
+  }
+
+  function resetSourceCodeToDefault() {
+    if (!requireGeneralAdmin()) return;
+    if (!confirm('سيتم تجهيز الكود الأصلي داخل المحرر. لن يتم نشره للجميع إلا بعد الضغط على حفظ. هل تريد المتابعة؟')) return;
+    var textarea = document.getElementById('sourceCodeTextarea');
+    if (textarea) textarea.value = String(window.__DEFAULT_SOURCE_HTML__ || '');
+    var metaEl = document.getElementById('sourceEditorMeta');
+    if (metaEl) metaEl.textContent = 'تم تحميل الكود الأصلي داخل المحرر. اضغط على حفظ الكود مركزياً لنشر النسخة الأصلية على جميع المستخدمين.';
+  }
+
+  async function saveSourceCodeChanges() {
+    if (!requireGeneralAdmin() || !requireOnlineAdminSync()) return;
+    var textarea = document.getElementById('sourceCodeTextarea');
+    if (!textarea) return;
+    var sourceHtml = String(textarea.value || '');
+    var normalizedSourceHtml = sourceHtml.trim() ? sourceHtml : '';
+    if (!normalizedSourceHtml) {
+      var restoreConfirmed = confirm('سيؤدي الحفظ بدون كود إلى استعادة الواجهة الأصلية لجميع المستخدمين. هل تريد المتابعة؟');
+      if (!restoreConfirmed) return;
+    }
+    try {
+      var payload = await fetchCentralSnapshot();
+      if (!payload) {
+        showAdminMessage('❌ تعذر الوصول إلى الخادم المركزي حالياً.', 'error');
+        return;
+      }
+      var newUiConfig = normalizeUiConfig(payload.uiConfig || null);
+      newUiConfig.sourceEditor = {
+        appShellHtml: normalizedSourceHtml,
+        updatedAt: nowIso(),
+        updatedBy: (state.currentUser && (state.currentUser.displayName || state.currentUser.username)) || 'المدير'
+      };
+      var users = getRemoteUsersFromPayload(payload).filter(function(user) {
+        return !(payload.deletedUsers || {})[user.username];
+      });
+      var saved = await saveCentralSnapshot(buildCentralPayload(users, payload.deletedUsers || {}, newUiConfig, getSharedFilesFromPayload(payload), getFileOverridesFromPayload(payload)));
+      reconcileUsersFromCentral(saved);
+      closeSourceCodeEditorPanel();
+      alert(normalizedSourceHtml ? '✅ تم حفظ كود HTML مركزياً، وسيظهر لجميع المستخدمين بعد المزامنة.' : '✅ تمت استعادة الكود الأصلي مركزياً لجميع المستخدمين.');
+      setTimeout(function() { window.location.reload(); }, 120);
+    } catch (err) {
+      console.error(err);
+      showAdminMessage('❌ فشل حفظ كود الواجهة على الخادم المركزي.', 'error');
+    }
+  }
+
+  function populateTabSettingsForm() {
+    var uiConfig = normalizeUiConfig(state.uiConfig || DEFAULT_UI_CONFIG);
+    var appTitleInput = document.getElementById('appTitleInput');
+    if (appTitleInput) appTitleInput.value = uiConfig.appTitle;
+    TAB_IDS.forEach(function(tabId) {
+      var labelInput = document.getElementById('tabLabelInput_' + tabId);
+      var subtitleInput = document.getElementById('tabSubtitleInput_' + tabId);
+      if (labelInput) labelInput.value = uiConfig.tabs[tabId].label;
+      if (subtitleInput) subtitleInput.value = uiConfig.tabs[tabId].subtitle;
+    });
+  }
+
+  function applyUiConfig(uiConfig) {
+    var normalized = normalizeUiConfig(uiConfig);
+    var previous = JSON.stringify(state.uiConfig || {});
+    var next = JSON.stringify(normalized);
+    var previousSourceHtml = getSourceEditorConfig(state.uiConfig || DEFAULT_UI_CONFIG).appShellHtml || '';
+    var nextSourceHtml = getSourceEditorConfig(normalized).appShellHtml || '';
+    var sourceChanged = previousSourceHtml !== nextSourceHtml;
+    state.uiConfig = normalized;
+    saveUiConfigLocal(normalized);
+
+    if (sourceChanged && state.appBooted) {
+      setTimeout(function() { window.location.reload(); }, 60);
+      return;
+    }
+    if (sourceChanged) {
+      var editableRoot = document.getElementById('sourceEditableRoot');
+      if (editableRoot) editableRoot.innerHTML = getEffectiveSourceEditorHtml(normalized);
+    }
+
+    var appTitleEl = document.getElementById('appTitle');
+    if (appTitleEl) appTitleEl.textContent = normalized.appTitle;
+
+    TAB_IDS.forEach(function(tabId) {
+      TAB_META[tabId].label = normalized.tabs[tabId].label;
+      TAB_META[tabId].subtitle = normalized.tabs[tabId].subtitle;
+      var labelEl = document.getElementById('tabLabelText_' + tabId);
+      if (labelEl) labelEl.textContent = normalized.tabs[tabId].label;
+      var tabBtn = document.getElementById('tabButton_' + tabId);
+      if (tabBtn) tabBtn.setAttribute('aria-label', normalized.tabs[tabId].label);
+    });
+
+    updateJudgmentTitlesFromTabs();
+    updatePermissionLabelTexts();
+    populateTabSettingsForm();
+    updateSourceEditorMeta(normalized);
+
+    var subtitleEl = document.getElementById('headerSubtitle');
+    if (subtitleEl && TAB_META[state.currentTab]) subtitleEl.textContent = TAB_META[state.currentTab].subtitle;
+
+    if (previous !== next && state.judgments && state.judgments.length) {
+      state.judgments = state.judgments.map(function(item) {
+        item.folderLabel = getTabMetaByCategory(item.category).label;
+        return item;
+      });
+      renderJudgments();
+    }
+  }
+
+  function showTabSettingsPanel() {
+    if (!requireGeneralAdmin()) return;
+    populateTabSettingsForm();
+    var panel = document.getElementById('tabSettingsPanel');
+    if (panel) panel.classList.add('active');
+  }
+
+  function closeTabSettingsPanel() {
+    var panel = document.getElementById('tabSettingsPanel');
+    if (panel) panel.classList.remove('active');
+  }
+
+  async function saveTabSettings() {
+    if (!requireGeneralAdmin() || !requireOnlineAdminSync()) return;
+    try {
+      var payload = await fetchCentralSnapshot();
+      if (!payload) {
+        showAdminMessage('❌ تعذر الوصول إلى الخادم المركزي حالياً.', 'error');
+        return;
+      }
+
+      var newUiConfig = { appTitle: (document.getElementById('appTitleInput').value || '').trim(), tabs: {} };
+      TAB_IDS.forEach(function(tabId) {
+        newUiConfig.tabs[tabId] = {
+          label: (document.getElementById('tabLabelInput_' + tabId).value || '').trim(),
+          subtitle: (document.getElementById('tabSubtitleInput_' + tabId).value || '').trim()
+        };
+      });
+      newUiConfig = normalizeUiConfig(newUiConfig);
+
+      var users = getRemoteUsersFromPayload(payload).filter(function(user) {
+        return !(payload.deletedUsers || {})[user.username];
+      });
+      var saved = await saveCentralSnapshot(buildCentralPayload(users, payload.deletedUsers || {}, newUiConfig));
+      reconcileUsersFromCentral(saved);
+      closeTabSettingsPanel();
+      showAdminMessage('✅ تم حفظ أسماء التبويبات وتحديث الصفحة مركزياً على جميع الأجهزة.', 'success');
+    } catch (err) {
+      console.error(err);
+      showAdminMessage('❌ فشل حفظ تحديثات الصفحة على الخادم المركزي.', 'error');
+    }
+  }
+
+  function nowIso() {
+    return new Date().toISOString();
+  }
+
+  function isOnline() {
+    if (typeof navigator === 'undefined') return true;
+    if (navigator.connection && navigator.connection.type) {
+      return navigator.connection.type !== 'none';
+    }
+    return navigator.onLine !== false;
+  }
+
+  function normalizeUser(user) {
+    var normalized = Object.assign({}, user || {});
+    normalized.username = String(normalized.username || '').trim();
+    normalized.password = String(normalized.password || '');
+    normalized.displayName = String(normalized.displayName || normalized.username || '').trim();
+    normalized.isAdmin = normalized.username === DEFAULT_ADMIN.username;
+    normalized.isSuspended = normalized.isAdmin ? false : !!normalized.isSuspended;
+    normalized.canOpenInternal = normalized.isAdmin ? true : normalized.canOpenInternal !== false;
+    normalized.canOpenExternal = normalized.isAdmin ? true : normalized.canOpenExternal !== false;
+    normalized.canDownload = normalized.isAdmin ? true : normalized.canDownload !== false;
+    TAB_IDS.forEach(function(tabId) {
+      var permKey = TAB_META[tabId].permKey;
+      normalized[permKey] = normalized.isAdmin ? true : normalized[permKey] !== false;
+    });
+    normalized.updatedAt = normalized.updatedAt || nowIso();
+    return normalized;
+  }
+
+  function normalizeUsersList(users) {
+    var map = {};
+    (users || []).forEach(function(user) {
+      var normalized = normalizeUser(user);
+      if (!normalized.username) return;
+      map[normalized.username] = normalized;
+    });
+    map[DEFAULT_ADMIN.username] = normalizeUser(Object.assign({}, DEFAULT_ADMIN, map[DEFAULT_ADMIN.username] || {}));
+    return Object.keys(map).map(function(key) { return map[key]; });
+  }
+
+  function normalizeSharedFileRecord(record) {
+    var raw = record && typeof record === 'object' ? Object.assign({}, record) : {};
+    var category = raw.category || 'urgent';
+    var name = String(raw.name || 'ملف').trim() || 'ملف';
+    var key = raw.key || makeItemKey(category, name);
+    var chunkUrls = Array.isArray(raw.chunkUrls) ? raw.chunkUrls.filter(function(url) { return /^https:\/\//i.test(String(url || '')); }) : [];
+    return {
+      key: key,
+      category: category,
+      name: name,
+      title: String(raw.title || titleFromName(name) || name).trim() || name,
+      description: String(raw.description || '').trim(),
+      size: Number(raw.size || 0),
+      timestamp: Number(raw.timestamp || Date.now()),
+      mimeType: String(raw.mimeType || inferMimeType(name) || 'application/octet-stream'),
+      extension: String(raw.extension || getFileExtension(name) || '').toLowerCase(),
+      createdAt: raw.createdAt || nowIso(),
+      createdBy: String(raw.createdBy || 'المدير').trim() || 'المدير',
+      chunkUrls: chunkUrls,
+      isSharedUpload: true
+    };
+  }
+
+  function normalizeSharedFilesMap(sharedFiles) {
+    var map = {};
+    if (sharedFiles && typeof sharedFiles === 'object') {
+      Object.keys(sharedFiles).forEach(function(key) {
+        var normalized = normalizeSharedFileRecord(sharedFiles[key]);
+        if (!normalized.chunkUrls.length) return;
+        map[normalized.key] = normalized;
+      });
+    }
+    return map;
+  }
+
+  function getSharedFilesFromPayload(payload) {
+    return normalizeSharedFilesMap(payload && payload.sharedFiles ? payload.sharedFiles : {});
+  }
+
+  function normalizeFileOverridesMap(fileOverrides) {
+    var map = {};
+    if (fileOverrides && typeof fileOverrides === 'object') {
+      Object.keys(fileOverrides).forEach(function(key) {
+        var raw = fileOverrides[key] || {};
+        map[key] = {
+          title: typeof raw.title === 'string' ? raw.title.trim() : '',
+          hidden: !!raw.hidden,
+          updatedAt: raw.updatedAt || nowIso(),
+          updatedBy: String(raw.updatedBy || '').trim()
+        };
+      });
+    }
+    return map;
+  }
+
+  function getFileOverridesFromPayload(payload) {
+    return normalizeFileOverridesMap(payload && payload.fileOverrides ? payload.fileOverrides : {});
+  }
+
+  function getFileOverride(key) {
+    return (state && state.fileOverrides && state.fileOverrides[key]) ? state.fileOverrides[key] : null;
+  }
+
+  function applyFileOverrideToItem(item) {
+    if (!item) return item;
+    var override = getFileOverride(item.key);
+    item.hidden = false;
+    if (!override) return item;
+    if (typeof override.title === 'string' && override.title.trim()) {
+      item.title = override.title.trim();
+    }
+    item.hidden = !!override.hidden;
+    item.overrideUpdatedAt = override.updatedAt || null;
+    item.overrideUpdatedBy = override.updatedBy || null;
+    return item;
+  }
+
+  function buildCentralPayload(users, deletedUsers, uiConfig, sharedFiles, fileOverrides) {
+    var payload = {
+      schemaVersion: 4,
+      updatedAt: nowIso(),
+      users: {},
+      deletedUsers: Object.assign({}, deletedUsers || {}),
+      uiConfig: normalizeUiConfig(uiConfig || ((typeof state !== 'undefined' && state.uiConfig) ? state.uiConfig : null)),
+      sharedFiles: normalizeSharedFilesMap(sharedFiles || ((typeof state !== 'undefined' && state.sharedFiles) ? state.sharedFiles : {})),
+      fileOverrides: normalizeFileOverridesMap(fileOverrides || ((typeof state !== 'undefined' && state.fileOverrides) ? state.fileOverrides : {}))
+    };
+    normalizeUsersList(users).forEach(function(user) {
+      payload.users[user.username] = normalizeUser(user);
+    });
+    delete payload.deletedUsers[DEFAULT_ADMIN.username];
+    return payload;
+  }
+
+  function parseCentralPayload(raw) {
+    if (!raw) {
+      return buildCentralPayload([DEFAULT_ADMIN], {});
+    }
+    if (Array.isArray(raw)) {
+      return buildCentralPayload(raw, {});
+    }
+    if (raw && raw.users && Array.isArray(raw.users)) {
+      return buildCentralPayload(raw.users, raw.deletedUsers || {}, raw.uiConfig || null, raw.sharedFiles || null, raw.fileOverrides || null);
+    }
+    if (raw && raw.users && typeof raw.users === 'object') {
+      return buildCentralPayload(Object.keys(raw.users).map(function(key) { return raw.users[key]; }), raw.deletedUsers || {}, raw.uiConfig || null, raw.sharedFiles || null, raw.fileOverrides || null);
+    }
+    if (raw && typeof raw === 'object') {
+      return buildCentralPayload(Object.keys(raw).map(function(key) { return raw[key]; }), {});
+    }
+    return buildCentralPayload([DEFAULT_ADMIN], {});
+  }
+
+  function getRemoteUsersFromPayload(payload) {
+    return normalizeUsersList(Object.keys((payload && payload.users) || {}).map(function(key) {
+      return payload.users[key];
+    }));
+  }
+
+  function fetchJson(url, options) {
+    return fetch(url, Object.assign({ cache: 'no-store' }, options || {})).then(function(response) {
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      return response.text().then(function(text) {
+        return text ? parseJSON(text, null) : null;
+      });
+    });
+  }
+
+  function getCentralSyncUrls() {
+    if (Array.isArray(CENTRAL_SYNC.urls) && CENTRAL_SYNC.urls.length) {
+      return CENTRAL_SYNC.urls.slice();
+    }
+    return CENTRAL_SYNC.url ? [CENTRAL_SYNC.url] : [];
+  }
+
+  function cacheCentralSnapshot(payload) {
+    if (!payload) return null;
+    var normalized = parseCentralPayload(payload);
+    try {
+      localStorage.setItem(CENTRAL_SYNC.cacheStorageKey, JSON.stringify(normalized));
+    } catch (e) {}
+    return normalized;
+  }
+
+  function getCachedCentralSnapshot() {
+    try {
+      var raw = localStorage.getItem(CENTRAL_SYNC.cacheStorageKey);
+      if (!raw) return null;
+      return parseCentralPayload(parseJSON(raw, null));
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function fetchBundledCentralSnapshot() {
+    if (!CENTRAL_SYNC.localFallbackPath) return Promise.resolve(null);
+    return fetchJson(CENTRAL_SYNC.localFallbackPath, { method: 'GET' }).then(function(raw) {
+      return cacheCentralSnapshot(raw);
+    }).catch(function(err) {
+      console.error('Bundled central snapshot fetch failed:', err);
+      return null;
+    });
+  }
+
+  function fetchCentralSnapshot() {
+    var cached = getCachedCentralSnapshot();
+    if (!isOnline()) {
+      return Promise.resolve(cached);
+    }
+    var urls = getCentralSyncUrls();
+    var index = 0;
+    function tryNext() {
+      if (index >= urls.length) return Promise.resolve(null);
+      var currentUrl = urls[index++];
+      return fetchJson(currentUrl, { method: 'GET' }).then(function(raw) {
+        return cacheCentralSnapshot(raw);
+      }).catch(function(err) {
+        console.error('Central sync fetch failed:', currentUrl, err);
+        return tryNext();
+      });
+    }
+    return tryNext().then(function(payload) {
+      if (payload) return payload;
+      if (cached) return cached;
+      return fetchBundledCentralSnapshot();
+    });
+  }
+
+  function saveCentralSnapshot(payload) {
+    var normalizedPayload = buildCentralPayload(getRemoteUsersFromPayload(payload), payload.deletedUsers || {}, payload.uiConfig || null, payload.sharedFiles || {}, payload.fileOverrides || {});
+    cacheCentralSnapshot(normalizedPayload);
+    if (!isOnline()) {
+      return Promise.resolve(parseCentralPayload(normalizedPayload));
+    }
+    var requestBody = JSON.stringify(normalizedPayload);
+    var urls = getCentralSyncUrls();
+    return Promise.all(urls.map(function(currentUrl) {
+      return fetchJson(currentUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: requestBody
+      }).then(function(raw) {
+        return { ok: true, raw: raw, url: currentUrl };
+      }).catch(function(err) {
+        console.error('Central sync save failed:', currentUrl, err);
+        return { ok: false, error: err, url: currentUrl };
+      });
+    })).then(function(results) {
+      var success = results.find(function(item) { return item.ok; });
+      if (!success) {
+        throw new Error('Central sync save failed for all endpoints');
+      }
+      return cacheCentralSnapshot(success.raw || normalizedPayload);
+    });
+  }
+
+  function reconcileUsersFromCentral(payload) {
+    if (!payload) return false;
+    var deletedUsers = Object.assign({}, (payload && payload.deletedUsers) || {});
+    delete deletedUsers[DEFAULT_ADMIN.username];
+    var remoteUsers = getRemoteUsersFromPayload(payload).filter(function(user) {
+      return !deletedUsers[user.username];
+    });
+    var finalUsers = normalizeUsersList(remoteUsers);
+
+    saveUsers(finalUsers);
+    applyUiConfig((payload && payload.uiConfig) || null);
+    state.sharedFiles = getSharedFilesFromPayload(payload);
+    state.fileOverrides = getFileOverridesFromPayload(payload);
+    mergeSharedFilesIntoJudgments();
+
+    if (state.currentUser) {
+      var refreshed = finalUsers.find(function(u) { return u.username === state.currentUser.username; });
+      if (!refreshed) {
+        clearCurrentUser();
+        hideSuspendedOverlay();
+        stopSuspendedPolling();
+        checkAuth();
+        alert('تم حذف هذا الحساب من قبل المدير من النظام المركزي.');
+      } else {
+        setCurrentUser(refreshed);
+        if (refreshed.isSuspended && !isGeneralAdmin(refreshed)) {
+          showSuspendedOverlay();
+          startSuspendedPolling();
+        } else {
+          hideSuspendedOverlay();
+          stopSuspendedPolling();
+        }
+        updateUserInfoHeader();
+        applyTabPermissions();
+      }
+    }
+
+    renderAdminUserList();
+    return true;
+  }
+
+  function syncWithCentralServer() {
+    if (state.centralSyncInProgress || !isOnline()) {
+      return Promise.resolve(false);
+    }
+    state.centralSyncInProgress = true;
+    return fetchCentralSnapshot().then(function(payload) {
+      if (!payload) return false;
+      return reconcileUsersFromCentral(payload);
+    }).finally(function() {
+      state.centralSyncInProgress = false;
+    });
+  }
+
+  function setPermissionSyncButtonState(isLoading) {
+    var btn = document.getElementById('permissionSyncBtn');
+    if (!btn) return;
+    btn.disabled = !!isLoading;
+    btn.classList.toggle('is-loading', !!isLoading);
+    btn.innerHTML = isLoading ? '⏳ جارٍ التحديث' : '🔐 تحديث الصلاحيات';
+    btn.title = isLoading ? 'جاري تحديث صلاحيات المستخدم من الخادم المركزي فقط' : 'تحديث صلاحيات المستخدم من الخادم المركزي فقط';
+    syncSettingsMenuVisibility();
+  }
+
+  function setFullSyncButtonState(isLoading) {
+    var btn = document.getElementById('fullSyncBtn');
+    if (!btn) return;
+    btn.disabled = !!isLoading;
+    btn.classList.toggle('is-loading', !!isLoading);
+    btn.innerHTML = isLoading ? '⏳ جارٍ التحديث' : '🔄 مزامنة كاملة';
+    btn.title = isLoading ? 'جاري تنفيذ مزامنة كاملة للصلاحيات والملفات' : 'مزامنة كاملة للصلاحيات والملفات من الخادم المركزي';
+    syncSettingsMenuVisibility();
+  }
+
+  function refreshCurrentUserUiAfterSync() {
+    var freshUser = getCurrentUser();
+    if (freshUser) {
+      setCurrentUser(freshUser);
+      updateUserInfoHeader();
+      applyTabPermissions();
+    }
+  }
+
+  function handleManualPermissionSync() {
+    if (!state.currentUser) return Promise.resolve(false);
+    if (state.manualPermissionSyncInProgress || state.manualFullSyncInProgress) return Promise.resolve(false);
+    if (!isOnline()) {
+      alert('❌ لا يمكن تحديث الصلاحيات الآن لعدم وجود اتصال بالإنترنت.');
+      return Promise.resolve(false);
+    }
+
+    state.manualPermissionSyncInProgress = true;
+    setPermissionSyncButtonState(true);
+    showOverlay('جاري تحديث صلاحيات المستخدم...', 28);
+
+    return Promise.resolve(syncWithCentralServer())
+      .then(function() {
+        refreshCurrentUserUiAfterSync();
+        alert('✅ تم تحديث صلاحيات المستخدم من الخادم المركزي بنجاح.');
+        return true;
+      })
+      .catch(function() {
+        alert('❌ تعذر تحديث الصلاحيات حالياً. حاول مرة أخرى بعد قليل.');
+        return false;
+      })
+      .finally(function() {
+        hideOverlay();
+        state.manualPermissionSyncInProgress = false;
+        setPermissionSyncButtonState(false);
+      });
+  }
+
+  function handleManualFullSync() {
+    if (!state.currentUser) return Promise.resolve(false);
+    if (state.manualFullSyncInProgress || state.manualPermissionSyncInProgress) return Promise.resolve(false);
+    if (!isOnline()) {
+      alert('❌ لا يمكن تنفيذ المزامنة الكاملة الآن لعدم وجود اتصال بالإنترنت.');
+      return Promise.resolve(false);
+    }
+
+    state.manualFullSyncInProgress = true;
+    setFullSyncButtonState(true);
+    showOverlay('جاري تنفيذ مزامنة كاملة للصلاحيات والملفات...', 35);
+
+    return Promise.allSettled([syncWithCentralServer(), syncAllFolders(true)])
+      .then(function(results) {
+        var syncFailed = results.some(function(result) { return result.status === 'rejected'; });
+        refreshCurrentUserUiAfterSync();
+        if (syncFailed) {
+          throw new Error('Partial sync failure');
+        }
+        alert('✅ تمت المزامنة الكاملة للصلاحيات والملفات بنجاح.');
+        return true;
+      })
+      .catch(function() {
+        alert('❌ تعذر إكمال المزامنة الكاملة حالياً. حاول مرة أخرى بعد قليل.');
+        return false;
+      })
+      .finally(function() {
+        hideOverlay();
+        state.manualFullSyncInProgress = false;
+        setFullSyncButtonState(false);
+      });
+  }
+
+  function requireOnlineAdminSync() {
+    if (isOnline()) return true;
+    showAdminMessage('❌ يلزم الاتصال بالإنترنت لتحديث صلاحيات المستخدمين مركزياً على جميع الأجهزة.', 'error');
+    return false;
+  }
+
+  // Default admin credentials
+  var DEFAULT_ADMIN = {
+    username: '770428514',
+    password: '8514',
+    displayName: 'المدير',
+    isAdmin: true,
+    isSuspended: false,
+    canOpenInternal: true,
+    canOpenExternal: true,
+    canDownload: true,
+    canViewTab1: true,
+    canViewTab2: true,
+    canViewTab3: true,
+    canViewTab4: true,
+    canViewTab5: true,
+    canViewTab6: true,
+    canViewTab7: true
+  };
+
+  var state = {
+    currentFilter1: 'all',
+    currentFilter2: 'all',
+    currentFilter3: 'all',
+    currentFilter4: 'all',
+    currentFilter5: 'all',
+    currentFilter6: 'all',
+    currentFilter7: 'all',
+    globalSearchQuery: '',
+    tabSearchQueries: { tab1: '', tab2: '', tab3: '', tab4: '', tab5: '', tab6: '', tab7: '' },
+    currentTab: 'tab1',
+    pendingOpenKey: null,
+    judgments: [],
+    syncInProgress: false,
+    centralSyncInProgress: false,
+    deviceReady: false,
+    objectUrl: null,
+    favorites: {},
+    ratings: {},
+    downloadedFiles: {},
+    currentUser: null,
+    appBooted: false,
+    sharedFiles: {},
+    fileOverrides: {},
+    pendingUploadTab: null,
+    editingUsername: null,
+    currentViewerItemKey: null,
+    currentViewerUrl: null,
+    manualPermissionSyncInProgress: false,
+    manualFullSyncInProgress: false
+  };
+
+  function isGeneralAdmin(user) {
+    return !!user && user.username === DEFAULT_ADMIN.username;
+  }
+
+  function requireGeneralAdmin(message) {
+    if (isGeneralAdmin(state.currentUser)) return true;
+    applyAdminVisibilityLock();
+    showAdminMessage(message || '❌ هذه العملية متاحة للمدير العام فقط.', 'error');
+    return false;
+  }
+
+  function applyAdminVisibilityLock() {
+    var isAdmin = isGeneralAdmin(state.currentUser);
+    var body = document.body;
+    if (body) {
+      body.classList.toggle('general-admin-mode', isAdmin);
+      body.classList.toggle('restricted-user-mode', !isAdmin);
+    }
+
+    ['adminPanelBtn', 'permissionSyncBtn', 'fullSyncBtn', 'sourceCodeEditorBtn', 'serverConfigEditorBtn'].forEach(function(id) {
+      var btn = document.getElementById(id);
+      if (!btn) return;
+      btn.hidden = !isAdmin;
+      btn.style.display = isAdmin ? 'flex' : 'none';
+      btn.setAttribute('aria-hidden', isAdmin ? 'false' : 'true');
+      btn.tabIndex = isAdmin ? 0 : -1;
+    });
+
+    var tabSettingsBtn = document.getElementById('tabSettingsBtn');
+    if (tabSettingsBtn) {
+      tabSettingsBtn.hidden = !isAdmin;
+      tabSettingsBtn.style.display = isAdmin ? 'flex' : 'none';
+      tabSettingsBtn.setAttribute('aria-hidden', isAdmin ? 'false' : 'true');
+      tabSettingsBtn.tabIndex = isAdmin ? 0 : -1;
+    }
+
+    Array.prototype.slice.call(document.querySelectorAll('.tab-upload-trigger')).forEach(function(btn) {
+      btn.hidden = !isAdmin;
+      btn.style.display = isAdmin ? 'inline-flex' : 'none';
+      btn.setAttribute('aria-hidden', isAdmin ? 'false' : 'true');
+      btn.tabIndex = isAdmin ? 0 : -1;
+    });
+    syncSettingsMenuVisibility();
+
+    var adminPanel = document.getElementById('adminPanel');
+    if (adminPanel && !isAdmin) {
+      adminPanel.classList.remove('active');
+      adminPanel.setAttribute('aria-hidden', 'true');
+    } else if (adminPanel) {
+      adminPanel.removeAttribute('aria-hidden');
+    }
+
+    var tabSettingsPanel = document.getElementById('tabSettingsPanel');
+    if (tabSettingsPanel && !isAdmin) {
+      tabSettingsPanel.classList.remove('active');
+      tabSettingsPanel.setAttribute('aria-hidden', 'true');
+    } else if (tabSettingsPanel) {
+      tabSettingsPanel.removeAttribute('aria-hidden');
+    }
+
+    var sourceEditorPanel = document.getElementById('sourceCodeEditorPanel');
+    if (sourceEditorPanel && !isAdmin) {
+      sourceEditorPanel.classList.remove('active');
+      sourceEditorPanel.setAttribute('aria-hidden', 'true');
+    } else if (sourceEditorPanel) {
+      sourceEditorPanel.removeAttribute('aria-hidden');
+    }
+
+    var serverConfigEditorPanel = document.getElementById('serverConfigEditorPanel');
+    if (serverConfigEditorPanel && !isAdmin) {
+      serverConfigEditorPanel.classList.remove('active');
+      serverConfigEditorPanel.setAttribute('aria-hidden', 'true');
+    } else if (serverConfigEditorPanel) {
+      serverConfigEditorPanel.removeAttribute('aria-hidden');
+    }
+  }
+
+  /* ===== USER MANAGEMENT ===== */
+
+  function getUsers() {
+    return parseJSON(localStorage.getItem(STORAGE_KEYS.users) || '[]', []);
+  }
+
+  function saveUsers(users) {
+    localStorage.setItem(STORAGE_KEYS.users, JSON.stringify(users));
+  }
+
+  function getCurrentUserSnapshot() {
+    return parseJSON(localStorage.getItem(STORAGE_KEYS.currentUserSnapshot) || 'null', null);
+  }
+
+  function storeCurrentUserSnapshot(user) {
+    if (!user || !user.username) return;
+    try {
+      localStorage.setItem(STORAGE_KEYS.currentUserSnapshot, JSON.stringify(normalizeUser(user)));
+    } catch (e) {}
+  }
+
+  function clearCurrentUserSnapshot() {
+    try {
+      localStorage.removeItem(STORAGE_KEYS.currentUserSnapshot);
+    } catch (e) {}
+  }
+
+  function initUsers() {
+    var users = getUsers();
+    var changed = false;
+
+    users = users.map(function(u) {
+      var normalized = Object.assign({}, u);
+      if (typeof normalized.isSuspended === 'undefined') {
+        normalized.isSuspended = false;
+        changed = true;
+      }
+      if (typeof normalized.canOpenInternal === 'undefined') {
+        normalized.canOpenInternal = true;
+        changed = true;
+      }
+      if (typeof normalized.canOpenExternal === 'undefined') {
+        normalized.canOpenExternal = true;
+        changed = true;
+      }
+      if (typeof normalized.canDownload === 'undefined') {
+        normalized.canDownload = true;
+        changed = true;
+      }
+      TAB_IDS.forEach(function(tabId) {
+        var permKey = TAB_META[tabId].permKey;
+        if (typeof normalized[permKey] === 'undefined') {
+          normalized[permKey] = true;
+          changed = true;
+        }
+      });
+
+      if (normalized.username === DEFAULT_ADMIN.username) {
+        if (!normalized.isAdmin) {
+          normalized.isAdmin = true;
+          changed = true;
+        }
+        if (normalized.isSuspended) {
+          normalized.isSuspended = false;
+          changed = true;
+        }
+        if (!normalized.canOpenInternal) {
+          normalized.canOpenInternal = true;
+          changed = true;
+        }
+        if (!normalized.canOpenExternal) {
+          normalized.canOpenExternal = true;
+          changed = true;
+        }
+        if (!normalized.canDownload) {
+          normalized.canDownload = true;
+          changed = true;
+        }
+        TAB_IDS.forEach(function(tabId) {
+          var permKey = TAB_META[tabId].permKey;
+          if (!normalized[permKey]) {
+            normalized[permKey] = true;
+            changed = true;
+          }
+        });
+      } else if (normalized.isAdmin) {
+        normalized.isAdmin = false;
+        changed = true;
+      }
+
+      return normalized;
+    });
+
+    var adminExists = users.some(function(u) { return u.username === DEFAULT_ADMIN.username; });
+    if (!adminExists) {
+      users.unshift(Object.assign({}, DEFAULT_ADMIN));
+      changed = true;
+    }
+
+    // Removed local demo users to prevent cross-device permission drift.
+
+    if (changed) {
+      saveUsers(users);
+    }
+  }
+
+  function getCurrentUser() {
+    var userData = sessionStorage.getItem(STORAGE_KEYS.auth);
+    if (!userData) return null;
+    var parsed = parseJSON(userData, null);
+    if (!parsed || !parsed.username) return null;
+    var users = getUsers();
+    var stored = users.find(function(u) { return u.username === parsed.username; }) || null;
+    var snapshot = getCurrentUserSnapshot();
+    if (snapshot && snapshot.username !== parsed.username) snapshot = null;
+    var merged = Object.assign({}, parsed || {}, snapshot || {}, stored || {});
+    if (!merged || !merged.username) return null;
+    return normalizeUser(merged);
+  }
+
+  function setCurrentUser(user) {
+    var normalizedUser = normalizeUser(user);
+    sessionStorage.setItem(STORAGE_KEYS.auth, JSON.stringify(normalizedUser));
+    storeCurrentUserSnapshot(normalizedUser);
+    state.currentUser = normalizedUser;
+  }
+
+  function clearCurrentUser() {
+    sessionStorage.removeItem(STORAGE_KEYS.auth);
+    clearCurrentUserSnapshot();
+    state.currentUser = null;
+  }
+
+  /* ===== AUTH ===== */
+
+  function checkAuth() {
+    var user = getCurrentUser();
+    var loginScreen = document.getElementById('loginScreen');
+    var appContainer = document.getElementById('app');
+
+    if (!loginScreen || !appContainer) return;
+
+    if (user) {
+      state.currentUser = user;
+      loginScreen.style.display = 'none';
+      appContainer.style.display = 'flex';
+      updateUserInfoHeader();
+      applyAdminVisibilityLock();
+    } else {
+      loginScreen.style.display = 'flex';
+      appContainer.style.display = 'none';
+      applyAdminVisibilityLock();
+      setTimeout(function () {
+        var usernameInput = document.getElementById('usernameInput');
+        if (usernameInput) usernameInput.focus();
+      }, 80);
+    }
+  }
+
+  async function handleLogin() {
+    var userInput = document.getElementById('usernameInput').value.trim();
+    var passInput = document.getElementById('passwordInput').value.trim();
+    var error = document.getElementById('loginError');
+
+    function attemptLogin() {
+      var users = getUsers();
+      return users.find(function(u) {
+        return u.username === userInput && u.password === passInput;
+      });
+    }
+
+    var found = attemptLogin();
+    if (!found && isOnline()) {
+      await syncWithCentralServer();
+      found = attemptLogin();
+    }
+
+    if (found && found.isSuspended && !isGeneralAdmin(found)) {
+      error.textContent = 'هذا الحساب موقوف مؤقتاً من قبل المدير.';
+      error.style.display = 'block';
+      return;
+    }
+
+    if (found) {
+      setCurrentUser(found);
+      error.style.display = 'none';
+      document.getElementById('passwordInput').value = '';
+      document.getElementById('usernameInput').value = '';
+      checkAuth();
+      await syncWithCentralServer();
+    } else {
+      error.textContent = isOnline() ? 'بيانات الدخول غير صحيحة أو لم تصل مزامنة المستخدم بعد.' : 'بيانات الدخول غير صحيحة!';
+      error.style.display = 'block';
+      var card = document.querySelector('.login-card');
+      if (card) {
+        card.style.animation = 'none';
+        setTimeout(function() {
+          card.style.animation = 'shake 0.4s ease-in-out';
+        }, 10);
+      }
+    }
+  }
+
+  function logout() {
+    if (!confirm('هل تريد تسجيل الخروج من التطبيق؟')) return;
+    clearCurrentUser();
+    // Reset UI without reloading
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+    // Close any open modals
+    closeOpenOptions();
+    closeViewer();
+    closeAdminPanel();
+    closeTabSettingsPanel();
+    // Reset inputs
+    var uInput = document.getElementById('usernameInput');
+    var pInput = document.getElementById('passwordInput');
+    if (uInput) { uInput.value = ''; }
+    if (pInput) { pInput.value = ''; }
+    setTimeout(function() {
+      var uInput2 = document.getElementById('usernameInput');
+      if (uInput2) uInput2.focus();
+    }, 100);
+  }
+
+  function updateUserInfoHeader() {
+    var user = state.currentUser;
+    if (!user) return;
+    var userInfoEl = document.getElementById('currentUserInfo');
+    if (userInfoEl) {
+      userInfoEl.textContent = '👤 ' + (user.displayName || user.username);
+    }
+    var adminBtn = document.getElementById('adminPanelBtn');
+    if (adminBtn) {
+      adminBtn.style.display = isGeneralAdmin(user) ? 'flex' : 'none';
+    }
+    applyAdminVisibilityLock();
+    applyTabPermissions();
+  }
+
+  /* ===== ADMIN PANEL ===== */
+
+  function showAdminPanel() {
+    var user = state.currentUser;
+    if (!user || !isGeneralAdmin(user)) {
+      applyAdminVisibilityLock();
+      return;
+    }
+    renderAdminUserList();
+    var panel = document.getElementById('adminPanel');
+    if (panel) panel.classList.add('active');
+    applyAdminVisibilityLock();
+  }
+
+  function closeAdminPanel() {
+    var panel = document.getElementById('adminPanel');
+    if (panel) panel.classList.remove('active');
+    applyAdminVisibilityLock();
+    closeUserEditor();
+    // Clear form
+    var fields = ['newUsername', 'newPassword', 'newDisplayName'];
+    fields.forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    ['perm-internal','perm-external','perm-download'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.checked = true;
+    });
+  }
+
+  function renderAdminUserList() {
+    var users = getUsers();
+    var container = document.getElementById('adminUserList');
+    if (!container) return;
+    container.innerHTML = '';
+
+    users.forEach(function(user) {
+      var row = document.createElement('div');
+      row.className = 'admin-user-row';
+      if (user.isSuspended) row.classList.add('is-suspended');
+
+      var perms = [];
+      if (user.canOpenInternal) perms.push('فتح داخلي');
+      if (user.canOpenExternal) perms.push('فتح خارجي');
+      if (user.canDownload) perms.push('تنزيل');
+      if (user.canViewTab1) perms.push('⚡ ' + TAB_META.tab1.label);
+      if (user.canViewTab2) perms.push('📜 ' + TAB_META.tab2.label);
+      if (user.canViewTab3) perms.push('👤 ' + TAB_META.tab3.label);
+      if (user.canViewTab4) perms.push('⚖️ ' + TAB_META.tab4.label);
+      if (user.canViewTab5) perms.push('🧾 ' + TAB_META.tab5.label);
+      if (user.canViewTab6) perms.push('🏛️ ' + TAB_META.tab6.label);
+      if (user.canViewTab7) perms.push('📚 ' + TAB_META.tab7.label);
+      if (user.isAdmin) perms.push('مدير');
+
+      var safeUsername = escapeHtml(user.username);
+      var jsUsername = escapeJsString(user.username);
+      var statusClass = user.isAdmin ? 'admin' : (user.isSuspended ? 'suspended' : 'active');
+      var statusLabel = user.isAdmin ? 'مدير النظام' : (user.isSuspended ? 'موقوف مؤقتاً' : 'نشط');
+
+      row.innerHTML =
+        '<div class="admin-user-info">' +
+          '<div class="admin-user-name">' + escapeHtml(user.displayName || user.username) + '</div>' +
+          '<div class="admin-user-details">@' + safeUsername + '</div>' +
+          '<div class="admin-user-perms">' + (perms.length ? perms.join(' · ') : 'لا صلاحيات') + '</div>' +
+          '<div class="admin-user-status"><span class="admin-status-badge ' + statusClass + '">' + statusLabel + '</span></div>' +
+        '</div>' +
+        '<div class="admin-user-actions">' +
+          (!user.isAdmin ?
+            '<button class="admin-action-btn" onclick="openUserEditor(\'' + jsUsername + '\')">✏️ تعديل</button>' +
+            '<button class="admin-suspend-btn ' + (user.isSuspended ? 'resume' : '') + '" onclick="toggleUserSuspension(\'' + jsUsername + '\')">' + (user.isSuspended ? '▶️ تفعيل' : '⏸️ إيقاف مؤقت') + '</button>' +
+            '<button class="admin-delete-btn" onclick="deleteUser(\'' + jsUsername + '\')">🗑️ حذف</button>' :
+            '<span class="admin-badge">مدير</span>'
+          ) +
+        '</div>';
+      container.appendChild(row);
+    });
+  }
+
+  async function createUser() {
+    if (!requireGeneralAdmin() || !requireOnlineAdminSync()) return;
+    var username = (document.getElementById('newUsername').value || '').trim();
+    var password = (document.getElementById('newPassword').value || '').trim();
+    var displayName = (document.getElementById('newDisplayName').value || '').trim();
+    var canInternal = document.getElementById('perm-internal').checked;
+    var canExternal = document.getElementById('perm-external').checked;
+    var canDownload = document.getElementById('perm-download').checked;
+    var canTab1 = document.getElementById('perm-tab1') ? document.getElementById('perm-tab1').checked : true;
+    var canTab2 = document.getElementById('perm-tab2') ? document.getElementById('perm-tab2').checked : true;
+    var canTab3 = document.getElementById('perm-tab3') ? document.getElementById('perm-tab3').checked : true;
+    var canTab4 = document.getElementById('perm-tab4') ? document.getElementById('perm-tab4').checked : true;
+    var canTab5 = document.getElementById('perm-tab5') ? document.getElementById('perm-tab5').checked : true;
+    var canTab6 = document.getElementById('perm-tab6') ? document.getElementById('perm-tab6').checked : true;
+    var canTab7 = document.getElementById('perm-tab7') ? document.getElementById('perm-tab7').checked : true;
+
+    if (!username || !password) {
+      showAdminMessage('❌ يرجى إدخال اسم المستخدم وكلمة المرور.', 'error');
+      return;
+    }
+
+    try {
+      var payload = await fetchCentralSnapshot();
+      if (!payload) {
+        showAdminMessage('❌ تعذر الوصول إلى الخادم المركزي حالياً.', 'error');
+        return;
+      }
+      var users = getRemoteUsersFromPayload(payload).filter(function(user) {
+        return !(payload.deletedUsers || {})[user.username];
+      });
+      var exists = users.find(function(u) { return u.username === username; });
+      if (exists) {
+        showAdminMessage('❌ اسم المستخدم مستخدم مسبقاً.', 'error');
+        return;
+      }
+
+      users.push(normalizeUser({
+        username: username,
+        password: password,
+        displayName: displayName || username,
+        isAdmin: false,
+        isSuspended: false,
+        canOpenInternal: canInternal,
+        canOpenExternal: canExternal,
+        canDownload: canDownload,
+        canViewTab1: canTab1,
+        canViewTab2: canTab2,
+        canViewTab3: canTab3,
+        canViewTab4: canTab4,
+        canViewTab5: canTab5,
+        canViewTab6: canTab6,
+        canViewTab7: canTab7,
+        updatedAt: nowIso()
+      }));
+      if (payload.deletedUsers) delete payload.deletedUsers[username];
+      var saved = await saveCentralSnapshot(buildCentralPayload(users, payload.deletedUsers || {}, payload.uiConfig || null));
+      reconcileUsersFromCentral(saved);
+
+      document.getElementById('newUsername').value = '';
+      document.getElementById('newPassword').value = '';
+      document.getElementById('newDisplayName').value = '';
+      document.getElementById('perm-internal').checked = true;
+      document.getElementById('perm-external').checked = true;
+      document.getElementById('perm-download').checked = true;
+      if (document.getElementById('perm-tab1')) document.getElementById('perm-tab1').checked = true;
+      if (document.getElementById('perm-tab2')) document.getElementById('perm-tab2').checked = true;
+      if (document.getElementById('perm-tab3')) document.getElementById('perm-tab3').checked = true;
+      if (document.getElementById('perm-tab4')) document.getElementById('perm-tab4').checked = true;
+      if (document.getElementById('perm-tab5')) document.getElementById('perm-tab5').checked = true;
+      if (document.getElementById('perm-tab6')) document.getElementById('perm-tab6').checked = true;
+      if (document.getElementById('perm-tab7')) document.getElementById('perm-tab7').checked = true;
+
+      showAdminMessage('✅ تم إنشاء المستخدم مركزياً وظهوره على جميع الأجهزة.', 'success');
+    } catch (err) {
+      console.error(err);
+      showAdminMessage('❌ فشل إنشاء المستخدم على الخادم المركزي.', 'error');
+    }
+  }
+
+  async function deleteUser(username) {
+    if (!requireGeneralAdmin() || !requireOnlineAdminSync()) return;
+    var users = getUsers();
+    var user = users.find(function(u) { return u.username === username; });
+    if (!user || user.isAdmin) {
+      showAdminMessage('❌ لا يمكن حذف هذا المستخدم.', 'error');
+      return;
+    }
+    if (!confirm('هل تريد حذف المستخدم "' + username + '" نهائياً من جميع الأجهزة؟')) return;
+
+    try {
+      var payload = await fetchCentralSnapshot();
+      if (!payload) {
+        showAdminMessage('❌ تعذر الوصول إلى الخادم المركزي حالياً.', 'error');
+        return;
+      }
+      var filtered = getRemoteUsersFromPayload(payload).filter(function(u) { return u.username !== username; });
+      var deletedUsers = Object.assign({}, payload.deletedUsers || {});
+      deletedUsers[username] = nowIso();
+      var saved = await saveCentralSnapshot(buildCentralPayload(filtered, deletedUsers, payload.uiConfig || null));
+      reconcileUsersFromCentral(saved);
+
+      if (state.editingUsername === username) {
+        closeUserEditor();
+      }
+
+      showAdminMessage('✅ تم حذف المستخدم مركزياً من جميع الأجهزة.', 'success');
+    } catch (err) {
+      console.error(err);
+      showAdminMessage('❌ فشل حذف المستخدم من الخادم المركزي.', 'error');
+    }
+  }
+
+  function deleteEditingUser() {
+    if (!requireGeneralAdmin()) return;
+    if (!state.editingUsername) {
+      showAdminMessage('❌ اختر مستخدماً أولاً.', 'error');
+      return;
+    }
+    deleteUser(state.editingUsername);
+  }
+
+  function openUserEditor(username) {
+    if (!requireGeneralAdmin()) return;
+    var users = getUsers();
+    var user = users.find(function(u) { return u.username === username; });
+    if (!user || user.isAdmin) {
+      showAdminMessage('❌ لا يمكن تعديل هذا المستخدم.', 'error');
+      return;
+    }
+
+    state.editingUsername = user.username;
+    document.getElementById('editUserCard').style.display = 'block';
+    document.getElementById('editUserDisplayName').textContent = user.displayName || user.username;
+    document.getElementById('editUserUsername').textContent = '@' + user.username;
+    document.getElementById('editDisplayName').value = user.displayName || user.username;
+    document.getElementById('editUsername').value = user.username;
+    document.getElementById('editPassword').value = user.password || '';
+    document.getElementById('edit-perm-internal').checked = !!user.canOpenInternal;
+    document.getElementById('edit-perm-external').checked = !!user.canOpenExternal;
+    document.getElementById('edit-perm-download').checked = !!user.canDownload;
+    document.getElementById('editUserSuspended').checked = !!user.isSuspended;
+    if (document.getElementById('edit-perm-tab1')) document.getElementById('edit-perm-tab1').checked = (typeof user.canViewTab1 === 'undefined' ? true : !!user.canViewTab1);
+    if (document.getElementById('edit-perm-tab2')) document.getElementById('edit-perm-tab2').checked = (typeof user.canViewTab2 === 'undefined' ? true : !!user.canViewTab2);
+    if (document.getElementById('edit-perm-tab3')) document.getElementById('edit-perm-tab3').checked = (typeof user.canViewTab3 === 'undefined' ? true : !!user.canViewTab3);
+    if (document.getElementById('edit-perm-tab4')) document.getElementById('edit-perm-tab4').checked = (typeof user.canViewTab4 === 'undefined' ? true : !!user.canViewTab4);
+    if (document.getElementById('edit-perm-tab5')) document.getElementById('edit-perm-tab5').checked = (typeof user.canViewTab5 === 'undefined' ? true : !!user.canViewTab5);
+    if (document.getElementById('edit-perm-tab6')) document.getElementById('edit-perm-tab6').checked = (typeof user.canViewTab6 === 'undefined' ? true : !!user.canViewTab6);
+    if (document.getElementById('edit-perm-tab7')) document.getElementById('edit-perm-tab7').checked = (typeof user.canViewTab7 === 'undefined' ? true : !!user.canViewTab7);
+  }
+
+  function closeUserEditor() {
+    state.editingUsername = null;
+    var card = document.getElementById('editUserCard');
+    if (card) card.style.display = 'none';
+    ['editDisplayName', 'editUsername', 'editPassword'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+  }
+
+  function showSuspendedOverlay() {
+    var overlay = document.getElementById('suspendedOverlay');
+    if (overlay) {
+      overlay.classList.add('active');
+      // Animate countdown dots
+      var dots = overlay.querySelector('.suspended-dots');
+      if (dots) {
+        var count = 0;
+        var dotsInterval = setInterval(function() {
+          count = (count + 1) % 4;
+          dots.textContent = '.'.repeat(count);
+        }, 500);
+        overlay._dotsInterval = dotsInterval;
+      }
+    }
+  }
+
+  function hideSuspendedOverlay() {
+    var overlay = document.getElementById('suspendedOverlay');
+    if (overlay) {
+      overlay.classList.remove('active');
+      if (overlay._dotsInterval) {
+        clearInterval(overlay._dotsInterval);
+        overlay._dotsInterval = null;
+      }
+    }
+  }
+
+  function syncCurrentUserRecord(updatedUser, previousUsername) {
+    if (!state.currentUser || !updatedUser) return;
+    var matchUsername = previousUsername || updatedUser.username;
+    if (state.currentUser.username !== matchUsername) return;
+    if (updatedUser.isSuspended && !updatedUser.isAdmin) {
+      // Instead of logout, show suspended overlay with waiting screen
+      setCurrentUser(updatedUser);
+      updateUserInfoHeader();
+      showSuspendedOverlay();
+      // Start polling to check if user is resumed
+      startSuspendedPolling();
+      return;
+    }
+    // User was resumed or permissions restored
+    hideSuspendedOverlay();
+    stopSuspendedPolling();
+    setCurrentUser(updatedUser);
+    updateUserInfoHeader();
+    applyTabPermissions();
+  }
+
+  var _suspendedPollTimer = null;
+
+  function startSuspendedPolling() {
+    stopSuspendedPolling();
+    _suspendedPollTimer = setInterval(function() {
+      if (!state.currentUser) {
+        stopSuspendedPolling();
+        return;
+      }
+      syncWithCentralServer().finally(function() {
+        var users = getUsers();
+        var freshUser = users.find(function(u) { return u.username === state.currentUser.username; });
+        if (freshUser && !freshUser.isSuspended) {
+          hideSuspendedOverlay();
+          stopSuspendedPolling();
+          setCurrentUser(freshUser);
+          updateUserInfoHeader();
+          applyTabPermissions();
+          showActivationSuccess();
+        }
+      });
+    }, CENTRAL_SYNC.suspendedPollMs);
+  }
+
+  function stopSuspendedPolling() {
+    if (_suspendedPollTimer) {
+      clearInterval(_suspendedPollTimer);
+      _suspendedPollTimer = null;
+    }
+  }
+
+  function showActivationSuccess() {
+    var toast = document.getElementById('activationToast');
+    if (toast) {
+      toast.classList.add('show');
+      setTimeout(function() { toast.classList.remove('show'); }, 4000);
+    }
+  }
+
+  function applyTabPermissions() {
+    var user = state.currentUser;
+    var tabBtns = document.querySelectorAll('.tab-btn');
+    TAB_IDS.forEach(function(tabId, idx) {
+      var permKey = TAB_META[tabId].permKey;
+      var canView = !user || isGeneralAdmin(user) || (user[permKey] !== false);
+      var tabBtn = tabBtns[idx];
+      var tabContent = document.getElementById(tabId);
+      if (tabBtn) {
+        tabBtn.style.opacity = canView ? '1' : '0.4';
+        tabBtn.style.pointerEvents = canView ? 'auto' : 'none';
+        tabBtn.title = canView ? '' : '🔒 ليس لديك صلاحية الوصول لهذا القسم';
+      }
+      if (tabContent) {
+        var lockedOverlay = tabContent.querySelector('.tab-locked-overlay');
+        if (!canView) {
+          if (!lockedOverlay) {
+            var overlay = document.createElement('div');
+            overlay.className = 'tab-locked-overlay';
+            overlay.innerHTML = '<div class="tab-locked-content"><div class="tab-locked-icon">🔒</div><div class="tab-locked-title">الوصول مقيد</div><div class="tab-locked-msg">ليس لديك صلاحية لعرض هذا القسم.<br>يرجى التواصل مع المدير.</div></div>';
+            tabContent.style.position = 'relative';
+            tabContent.insertBefore(overlay, tabContent.firstChild);
+          }
+        } else if (lockedOverlay) {
+          lockedOverlay.remove();
+        }
+      }
+    });
+
+    if (TAB_META[state.currentTab]) {
+      var currentPermKey = TAB_META[state.currentTab].permKey;
+      var currentAllowed = !user || isGeneralAdmin(user) || (user[currentPermKey] !== false);
+      if (!currentAllowed) {
+        for (var i = 0; i < TAB_IDS.length; i++) {
+          var tabId = TAB_IDS[i];
+          var allowed = !user || isGeneralAdmin(user) || (user[TAB_META[tabId].permKey] !== false);
+          if (allowed) { switchTab(tabId); break; }
+        }
+      }
+    }
+  }
+
+  async function saveUserEdits() {
+    if (!requireGeneralAdmin() || !requireOnlineAdminSync()) return;
+    if (!state.editingUsername) {
+      showAdminMessage('❌ اختر مستخدماً أولاً.', 'error');
+      return;
+    }
+
+    var originalUsername = state.editingUsername;
+    var newDisplayName = (document.getElementById('editDisplayName').value || '').trim();
+    var newUsername = (document.getElementById('editUsername').value || '').trim();
+    var newPassword = (document.getElementById('editPassword').value || '').trim();
+
+    if (!newUsername || !newPassword) {
+      showAdminMessage('❌ اسم المستخدم وكلمة المرور مطلوبان.', 'error');
+      return;
+    }
+
+    try {
+      var payload = await fetchCentralSnapshot();
+      if (!payload) {
+        showAdminMessage('❌ تعذر الوصول إلى الخادم المركزي حالياً.', 'error');
+        return;
+      }
+      var users = getRemoteUsersFromPayload(payload).filter(function(user) {
+        return !(payload.deletedUsers || {})[user.username];
+      });
+      var user = users.find(function(u) { return u.username === originalUsername; });
+      if (!user || user.isAdmin) {
+        showAdminMessage('❌ تعذر العثور على المستخدم.', 'error');
+        return;
+      }
+
+      var duplicateUser = users.find(function(u) {
+        return u.username === newUsername && u.username !== originalUsername;
+      });
+      if (duplicateUser) {
+        showAdminMessage('❌ اسم المستخدم الجديد مستخدم مسبقاً.', 'error');
+        return;
+      }
+
+      var updatedUser = normalizeUser({
+        username: newUsername,
+        password: newPassword,
+        displayName: newDisplayName || newUsername,
+        isAdmin: false,
+        isSuspended: document.getElementById('editUserSuspended').checked,
+        canOpenInternal: document.getElementById('edit-perm-internal').checked,
+        canOpenExternal: document.getElementById('edit-perm-external').checked,
+        canDownload: document.getElementById('edit-perm-download').checked,
+        canViewTab1: document.getElementById('edit-perm-tab1') ? document.getElementById('edit-perm-tab1').checked : true,
+        canViewTab2: document.getElementById('edit-perm-tab2') ? document.getElementById('edit-perm-tab2').checked : true,
+        canViewTab3: document.getElementById('edit-perm-tab3') ? document.getElementById('edit-perm-tab3').checked : true,
+        canViewTab4: document.getElementById('edit-perm-tab4') ? document.getElementById('edit-perm-tab4').checked : true,
+        canViewTab5: document.getElementById('edit-perm-tab5') ? document.getElementById('edit-perm-tab5').checked : true,
+        canViewTab6: document.getElementById('edit-perm-tab6') ? document.getElementById('edit-perm-tab6').checked : true,
+        canViewTab7: document.getElementById('edit-perm-tab7') ? document.getElementById('edit-perm-tab7').checked : true,
+        updatedAt: nowIso()
+      });
+
+      users = users.filter(function(u) { return u.username !== originalUsername && u.username !== newUsername; });
+      users.push(updatedUser);
+      var deletedUsers = Object.assign({}, payload.deletedUsers || {});
+      delete deletedUsers[newUsername];
+      if (originalUsername !== newUsername) {
+        deletedUsers[originalUsername] = nowIso();
+      }
+      var saved = await saveCentralSnapshot(buildCentralPayload(users, deletedUsers, payload.uiConfig || null));
+      reconcileUsersFromCentral(saved);
+      syncCurrentUserRecord(updatedUser, originalUsername);
+      closeUserEditor();
+      showAdminMessage('✅ تم تحديث بيانات المستخدم وصلاحياته مركزياً بنجاح.', 'success');
+    } catch (err) {
+      console.error(err);
+      showAdminMessage('❌ فشل تحديث بيانات المستخدم على الخادم المركزي.', 'error');
+    }
+  }
+
+  async function toggleUserSuspension(username) {
+    if (!requireGeneralAdmin() || !requireOnlineAdminSync()) return;
+    try {
+      var payload = await fetchCentralSnapshot();
+      if (!payload) {
+        showAdminMessage('❌ تعذر الوصول إلى الخادم المركزي حالياً.', 'error');
+        return;
+      }
+      var users = getRemoteUsersFromPayload(payload).filter(function(user) {
+        return !(payload.deletedUsers || {})[user.username];
+      });
+      var user = users.find(function(u) { return u.username === username; });
+      if (!user || user.isAdmin) {
+        showAdminMessage('❌ لا يمكن إيقاف هذا المستخدم.', 'error');
+        return;
+      }
+
+      user.isSuspended = !user.isSuspended;
+      user.updatedAt = nowIso();
+      var saved = await saveCentralSnapshot(buildCentralPayload(users, payload.deletedUsers || {}, payload.uiConfig || null));
+      reconcileUsersFromCentral(saved);
+      syncCurrentUserRecord(user, user.username);
+
+      if (state.editingUsername === user.username) {
+        openUserEditor(user.username);
+      }
+
+      showAdminMessage(user.isSuspended ? '✅ تم إيقاف المستخدم مؤقتاً مركزياً.' : '✅ تم تفعيل المستخدم مرة أخرى على جميع الأجهزة.', 'success');
+    } catch (err) {
+      console.error(err);
+      showAdminMessage('❌ فشل تحديث حالة المستخدم على الخادم المركزي.', 'error');
+    }
+  }
+
+  function showAdminMessage(msg, type) {
+    var el = document.getElementById('adminMessage');
+    if (!el) return;
+    el.textContent = msg;
+    el.className = 'admin-message ' + (type || 'success');
+    el.style.display = 'block';
+    setTimeout(function() { el.style.display = 'none'; }, 3000);
+  }
+
+  /* ===== PERMISSIONS ===== */
+
+  function canOpenInternal() {
+    return !state.currentUser || (!state.currentUser.isSuspended && (state.currentUser.canOpenInternal || isGeneralAdmin(state.currentUser)));
+  }
+
+  function canOpenExternal() {
+    return !state.currentUser || (!state.currentUser.isSuspended && (state.currentUser.canOpenExternal || isGeneralAdmin(state.currentUser)));
+  }
+
+  function canDownload() {
+    return !state.currentUser || (!state.currentUser.isSuspended && (state.currentUser.canDownload || isGeneralAdmin(state.currentUser)));
+  }
+
+  /* ===== HELPERS ===== */
+
+  function parseJSON(text, fallback) {
+    try { return JSON.parse(text); } catch (e) { return fallback; }
+  }
+
+  function escapeJsString(text) {
+    return String(text || '')
+      .replace(/\\/g, '\\\\')
+      .replace(/'/g, "\\'");
+  }
+
+  function normalizeKeyText(value) {
+    return String(value || '')
+      .replace(/\.pdf$/i, '')
+      .replace(/[_\-]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+  }
+
+  function makeItemKey(category, name) {
+    return category + '::' + normalizeKeyText(name);
+  }
+
+  function titleFromName(name) {
+    return String(name || '')
+      .replace(/\.pdf$/i, '')
+      .replace(/[_]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function sanitizeFileName(name) {
+    var clean = String(name || 'file.pdf').replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, ' ').trim();
+    if (!/\.pdf$/i.test(clean)) clean += '.pdf';
+    return clean;
+  }
+
+  function loadPreferences() {
+    var favoriteList = parseJSON(localStorage.getItem(STORAGE_KEYS.favorites) || '[]', []);
+    var ratingsMap = parseJSON(localStorage.getItem(STORAGE_KEYS.ratings) || '{}', {});
+    var downloadedMap = parseJSON(localStorage.getItem(STORAGE_KEYS.downloaded) || '{}', {});
+    state.favorites = {};
+    state.ratings = ratingsMap || {};
+    state.downloadedFiles = downloadedMap || {};
+    favoriteList.forEach(function (key) { state.favorites[key] = true; });
+  }
+
+  function saveDownloadedFiles() {
+    localStorage.setItem(STORAGE_KEYS.downloaded, JSON.stringify(state.downloadedFiles));
+  }
+
+  function saveFavorites() {
+    var keys = Object.keys(state.favorites).filter(function (key) { return state.favorites[key]; });
+    localStorage.setItem(STORAGE_KEYS.favorites, JSON.stringify(keys));
+  }
+
+  function saveRatings() {
+    localStorage.setItem(STORAGE_KEYS.ratings, JSON.stringify(state.ratings));
+  }
+
+  function buildItem(raw, fallbackCategory) {
+    var category = raw.category || fallbackCategory || 'urgent';
+    var name = raw.name || 'ملف PDF';
+    var key = raw.key || makeItemKey(category, name);
+    var downloaded = state.downloadedFiles[key];
+    var sharedChunkUrls = Array.isArray(raw.chunkUrls) ? raw.chunkUrls.slice() : [];
+    var isSharedUpload = !!raw.isSharedUpload || !!sharedChunkUrls.length;
+    return applyFileOverrideToItem({
+      key: key,
+      category: category,
+      type: category,
+      name: name,
+      title: raw.title || titleFromName(name),
+      description: raw.description || '',
+      assetPath: raw.assetPath || null,
+      localPath: downloaded ? downloaded.localPath : (raw.localPath || null),
+      localNativeURL: downloaded ? downloaded.localNativeURL : (raw.localNativeURL || raw.localPath || null),
+      localInternalURL: downloaded ? downloaded.localInternalURL : (raw.localInternalURL || raw.localPath || null),
+      size: raw.size || 0,
+      timestamp: raw.timestamp || 0,
+      source: (downloaded || raw.localPath) ? 'local' : (raw.assetPath ? 'asset' : (isSharedUpload ? 'shared' : 'cloud')),
+      isFavorite: !!state.favorites[key],
+      rating: Number(state.ratings[key] || 0),
+      remoteFolder: raw.remoteFolder || null,
+      folderLabel: raw.folderLabel || getTabMetaByCategory(category).label,
+      extension: raw.extension || getFileExtension(name),
+      mimeType: raw.mimeType || inferMimeType(name),
+      createdAt: raw.createdAt || null,
+      createdBy: raw.createdBy || null,
+      chunkUrls: sharedChunkUrls,
+      isSharedUpload: isSharedUpload,
+      hidden: false
+    });
+  }
+
+  function bundledItems() {
+    var items = [];
+    Object.keys(BUNDLED).forEach(function (category) {
+      (BUNDLED[category] || []).forEach(function (entry) {
+        items.push(buildItem({
+          key: makeItemKey(category, entry.name),
+          category: category,
+          name: entry.name,
+          assetPath: entry.assetPath,
+          size: entry.size,
+          timestamp: entry.timestamp,
+          description: 'ملف مرفق داخل التطبيق ويعمل بدون إنترنت.'
+        }, category));
+      });
+    });
+    return items;
+  }
+
+  function cachedItems() {
+    return parseJSON(localStorage.getItem(STORAGE_KEYS.cache) || '[]', []);
+  }
+
+  function persistLiveItems(items) {
+    try {
+      localStorage.setItem(STORAGE_KEYS.cache, JSON.stringify(items));
+    } catch (e) {}
+  }
+
+  function updateDescriptions() {
+    state.judgments.forEach(function (item) {
+      var downloaded = state.downloadedFiles[item.key];
+      if (downloaded) {
+        item.description = 'تم تنزيل الملف وهو متاح للفتح بدون إنترنت.';
+        item.source = 'local';
+        item.localPath = downloaded.localPath;
+        item.localNativeURL = downloaded.localNativeURL;
+        item.localInternalURL = downloaded.localInternalURL;
+      } else if (item.assetPath) {
+        item.description = 'ملف مرفق داخل التطبيق ويعمل بدون إنترنت.';
+        item.source = 'asset';
+      } else if (item.isSharedUpload) {
+        item.description = item.description || ('ملف تمت إضافته مركزياً من الإدارة ويظهر لكل المستخدمين المخوّلين داخل هذا التبويب.');
+        item.source = 'shared';
+      } else {
+        item.description = 'ملف سحابي يتم فتحه مباشرة من السحابة.';
+        item.source = 'cloud';
+      }
+      item.isFavorite = !!state.favorites[item.key];
+      item.rating = Number(state.ratings[item.key] || 0);
+    });
+  }
+
+  function getTabMetaByCategory(category) {
+    for (var i = 0; i < TAB_IDS.length; i++) {
+      var tabId = TAB_IDS[i];
+      if (TAB_META[tabId].category === category) return TAB_META[tabId];
+    }
+    return TAB_META.tab1;
+  }
+
+  function getFilterForTab(tabId) {
+    var tabIndex = TAB_IDS.indexOf(tabId) + 1;
+    return state['currentFilter' + tabIndex] || 'all';
+  }
+
+  function getTabSearchQuery(tabId) {
+    if (!state.tabSearchQueries) state.tabSearchQueries = {};
+    return String(state.tabSearchQueries[tabId] || '').trim();
+  }
+
+  function doesItemMatchQuery(item, query) {
+    var q = String(query || '').trim();
+    if (!q) return true;
+    return String(item.title || '').indexOf(q) >= 0 || String(item.name || '').indexOf(q) >= 0 || String(item.description || '').indexOf(q) >= 0;
+  }
+
+  function updateSearchInputsUI() {
+    var globalInput = document.getElementById('globalSearchInput');
+    var tabInput = document.getElementById('tabSearchInput');
+    if (globalInput && globalInput.value !== String(state.globalSearchQuery || '')) {
+      globalInput.value = String(state.globalSearchQuery || '');
+    }
+    if (tabInput) {
+      tabInput.value = getTabSearchQuery(state.currentTab);
+      var activeLabelEl = document.getElementById('tabLabelText_' + state.currentTab);
+      var activeLabel = activeLabelEl ? activeLabelEl.textContent.trim() : 'التبويب الحالي';
+      tabInput.placeholder = 'البحث داخل: ' + activeLabel;
+    }
+  }
+
+  function handleGlobalSearch(event) {
+    state.globalSearchQuery = String(event.target.value || '').trim();
+    renderJudgments();
+  }
+
+  function handleTabSearch(event) {
+    if (!state.tabSearchQueries) state.tabSearchQueries = {};
+    state.tabSearchQueries[state.currentTab] = String(event.target.value || '').trim();
+    renderJudgments();
+  }
+
+  function updateClock() {
+    var clockEl = document.getElementById('digitalClock');
+    if (!clockEl) return;
+    try {
+      var now = new Date();
+      clockEl.textContent = now.toLocaleTimeString('ar-YE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    } catch (e) {
+      clockEl.textContent = '--:--:--';
+    }
+  }
+
+  function closeDropdown() {
+    var panel = document.getElementById('panel');
+    if (panel) panel.classList.remove('active');
+  }
+
+  function toggleDropdown(event) {
+    if (event && event.stopPropagation) event.stopPropagation();
+    var panel = document.getElementById('panel');
+    if (panel) panel.classList.toggle('active');
+  }
+
+  function syncSettingsMenuVisibility() {
+    [
+      { menu: 'menuPermissionSync', target: 'permissionSyncBtn' },
+      { menu: 'menuFullSync', target: 'fullSyncBtn' },
+      { menu: 'menuServerConfig', target: 'serverConfigEditorBtn' },
+      { menu: 'menuSourceEditor', target: 'sourceCodeEditorBtn' },
+      { menu: 'menuUsers', target: 'adminPanelBtn' }
+    ].forEach(function(pair) {
+      var menuItem = document.getElementById(pair.menu);
+      var target = document.getElementById(pair.target);
+      if (!menuItem || !target) return;
+      var isVisible = !target.hidden && target.getAttribute('aria-hidden') !== 'true' && target.style.display !== 'none';
+      menuItem.hidden = !isVisible;
+    });
+
+    var themeToggle = document.getElementById('themeToggle');
+    var menuThemeLabel = document.getElementById('menuThemeLabel');
+    if (themeToggle && menuThemeLabel) {
+      menuThemeLabel.textContent = themeToggle.textContent === '☀️' ? 'الوضع النهاري' : 'الوضع الليلي';
+    }
+  }
+
+  function bindSettingsMenuActions() {
+    Array.prototype.slice.call(document.querySelectorAll('.menu-item[data-target]')).forEach(function(menuItem) {
+      menuItem.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var targetId = menuItem.getAttribute('data-target');
+        var target = document.getElementById(targetId);
+        closeDropdown();
+        if (target && typeof target.click === 'function') target.click();
+      });
+    });
+  }
+
+  function switchTab(tabId) {
+    state.currentTab = tabId;
+    document.querySelectorAll('.main-content').forEach(function (c) { c.classList.remove('active'); });
+    document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.remove('active'); });
+    var tabContent = document.getElementById(tabId);
+    if (tabContent) tabContent.classList.add('active');
+    var tabButtons = document.querySelectorAll('.tab-btn');
+    var index = TAB_IDS.indexOf(tabId);
+    if (index >= 0 && tabButtons[index]) tabButtons[index].classList.add('active');
+    var subtitle = document.getElementById('headerSubtitle');
+    if (subtitle && TAB_META[tabId]) subtitle.textContent = TAB_META[tabId].subtitle;
+    updateSearchInputsUI();
+    renderJudgments();
+  }
+
+  function setFilter(filter, tabId) {
+    var tabIndex = TAB_IDS.indexOf(tabId) + 1;
+    if (tabIndex > 0) state['currentFilter' + tabIndex] = filter;
+    var container = document.getElementById(tabId);
+    container.querySelectorAll('.filter-btn').forEach(function (button) {
+      button.classList.toggle('active', button.dataset.filter === filter);
+    });
+    renderJudgments();
+  }
+
+  function initTheme() {
+    var saved = localStorage.getItem(STORAGE_KEYS.theme) || 'light';
+    if (saved === 'dark') {
+      document.documentElement.classList.add('dark-mode');
+      document.getElementById('themeToggle').textContent = '☀️';
+    }
+    syncSettingsMenuVisibility();
+  }
+
+  function toggleTheme() {
+    var isDark = document.documentElement.classList.toggle('dark-mode');
+    localStorage.setItem(STORAGE_KEYS.theme, isDark ? 'dark' : 'light');
+    document.getElementById('themeToggle').textContent = isDark ? '☀️' : '🌙';
+    syncSettingsMenuVisibility();
+  }
+
+  function toggleFavorite(key) {
+    state.favorites[key] = !state.favorites[key];
+    if (!state.favorites[key]) delete state.favorites[key];
+    saveFavorites();
+    updateDescriptions();
+    updateStats();
+    renderJudgments();
+  }
+
+  function saveRating(key, rating) {
+    state.ratings[key] = Number(rating || 0);
+    saveRatings();
+    updateDescriptions();
+    renderJudgments();
+  }
+
+  function filterJudgments(tabId) {
+    var category = TAB_META[tabId].category;
+    var filter = getFilterForTab(tabId);
+    var globalQ = String(state.globalSearchQuery || '').trim();
+    var tabQ = getTabSearchQuery(tabId);
+    return state.judgments.filter(function (item) {
+      var sameCategory = item.category === category;
+      var matchesGlobalSearch = doesItemMatchQuery(item, globalQ);
+      var matchesTabSearch = doesItemMatchQuery(item, tabQ);
+      var matchesFilter = filter === 'all' ? true : (filter === 'favorites' ? item.isFavorite : item.rating > 0);
+      return sameCategory && !item.hidden && matchesGlobalSearch && matchesTabSearch && matchesFilter;
+    });
+  }
+
+
+  function updateStats() {
+    Object.keys(TAB_META).forEach(function (tabId, idx) {
+      var category = TAB_META[tabId].category;
+      var categoryItems = state.judgments.filter(function (item) { return item.category === category && !item.hidden; });
+      var favoritesCount = categoryItems.filter(function (item) { return item.isFavorite; }).length;
+      document.getElementById('totalJudgments' + (idx + 1)).textContent = categoryItems.length;
+      document.getElementById('favoritesCount' + (idx + 1)).textContent = favoritesCount;
+      var tabCountEl = document.getElementById('tabCount_' + tabId);
+      if (tabCountEl) {
+        tabCountEl.textContent = String(categoryItems.length);
+        tabCountEl.title = 'عدد الملفات: ' + categoryItems.length;
+      }
+      var tabBtnEl = document.getElementById('tabButton_' + tabId);
+      if (tabBtnEl && TAB_META[tabId]) {
+        tabBtnEl.setAttribute('aria-label', TAB_META[tabId].label + ' - عدد الملفات ' + categoryItems.length);
+      }
+    });
+  }
+
+  function renderJudgments() {
+    TAB_IDS.forEach(function(tabId, idx) {
+      renderForTab(tabId, 'judgmentsContainer' + (idx + 1), 'emptyState' + (idx + 1));
+    });
+  }
+
+  function renderForTab(tabId, containerId, emptyStateId) {
+    var container = document.getElementById(containerId);
+    var emptyState = document.getElementById(emptyStateId);
+    var filtered = filterJudgments(tabId);
+    if (!filtered.length) {
+      container.innerHTML = '';
+      emptyState.style.display = 'block';
+      return;
+    }
+    emptyState.style.display = 'none';
+    container.innerHTML = '';
+    filtered.forEach(function (item) {
+      var card = document.createElement('div');
+      card.className = 'judgment-card';
+      var starsHTML = Array.from({ length: 5 }, function (_, i) {
+        return '<span class="star ' + (i < item.rating ? 'active' : '') + '" onclick="event.stopPropagation(); saveRating(\'' + item.key.replace(/'/g, "\\'") + '\', ' + (i + 1) + ')">★</span>';
+      }).join('');
+      var isDownloaded = !!state.downloadedFiles[item.key];
+
+      // Build footer buttons based on permissions
+      var footerBtns = '';
+      if (canDownload()) {
+        if (isDownloaded) {
+          footerBtns += '<button class="judgment-btn-download downloaded" onclick="event.stopPropagation();"><span>✅</span> محمل</button>';
+        } else {
+          footerBtns += '<button class="judgment-btn-download" onclick="event.stopPropagation(); downloadAndSave(\'' + item.key.replace(/'/g, "\\'") + '\')"><span>📥</span> تنزيل</button>';
+        }
+      }
+      // Show open button only if user can open internally OR externally
+      if ((supportsInternalPreview(item) && canOpenInternal()) || canOpenExternal()) {
+        footerBtns += '<button class="judgment-btn-open" onclick="event.stopPropagation(); showOpenOptions(\'' + item.key.replace(/'/g, "\\'") + '\')"><span>📄</span> فتح</button>';
+      }
+      if (isGeneralAdmin(state.currentUser)) {
+        footerBtns += '<button class="judgment-btn-open" style="background:#8B5CF6;" onclick="event.stopPropagation(); promptRenameItem(\'' + item.key.replace(/'/g, "\\'") + '\')"><span>✏️</span> تعديل الاسم</button>';
+        footerBtns += '<button class="judgment-btn-download" style="background:#EF4444;" onclick="event.stopPropagation(); deleteCentralFile(\'' + item.key.replace(/'/g, "\\'") + '\')"><span>🗑️</span> حذف</button>';
+      }
+
+      var title = escapeHtml(item.title);
+      var description = escapeHtml(item.description);
+      var sizeText = item.size ? humanFileSize(item.size) : 'غير محدد';
+      var fileExt = escapeHtml((item.extension || getFileExtension(item.name) || 'ملف').toUpperCase());
+      var folderText = escapeHtml(item.folderLabel || getTabMetaByCategory(item.category).label || '');
+      var metaHtml = '<div class="judgment-meta-grid">' +
+        '<span class="judgment-meta-chip">📦 الحجم: ' + sizeText + '</span>' +
+        '<span class="judgment-meta-chip">🗂️ النوع: ' + fileExt + '</span>' +
+        '<span class="judgment-meta-chip">📁 ' + folderText + '</span>' +
+      '</div>';
+      var highlightTerms = [String(state.globalSearchQuery || '').trim(), getTabSearchQuery(tabId)].filter(function(term, index, arr) {
+        return !!term && arr.indexOf(term) === index;
+      });
+      
+      // تطبيق تحسينات البحث بحرفية
+      if (highlightTerms.length) {
+        try {
+          highlightTerms.forEach(function(term) {
+            var escapedQ = term.replace(/[.*+?^${}()|[\]\\]/g, '\$&');
+            var regex = new RegExp('(' + escapedQ + ')', 'gi');
+            title = title.replace(regex, '<span class="search-highlight">$1</span>');
+            description = description.replace(regex, '<span class="search-highlight">$1</span>');
+          });
+          card.classList.add('search-result-item');
+          card.style.animation = 'slideInUp 0.5s ease forwards';
+        } catch(e) { console.error("Search highlight error:", e); }
+      }
+
+      card.innerHTML = '' +
+        '<button class="judgment-favorite-btn ' + (item.isFavorite ? 'favorited' : '') + '" onclick="event.stopPropagation(); toggleFavorite(\'' + item.key.replace(/'/g, "\\'") + '\')">' + (item.isFavorite ? '❤️' : '🤍') + '</button>' +
+        '<div class="judgment-header"><div class="judgment-icon">⚖️</div><div class="judgment-title">' + title + '</div></div>' +
+        '<div class="judgment-content">' +
+          '<div class="judgment-description">' + description + '</div>' +
+          metaHtml +
+          '<div class="judgment-rating"><div class="rating-stars">' + starsHTML + '</div><span class="rating-count">' + item.rating + '/5</span></div>' +
+        '</div>' +
+        '<div class="judgment-footer" style="gap: 8px;">' + footerBtns + '</div>';
+      card.onclick = function () {
+        if ((supportsInternalPreview(item) && canOpenInternal()) || canOpenExternal()) showOpenOptions(item.key);
+      };
+      container.appendChild(card);
+    });
+  }
+
+  function escapeHtml(text) {
+    return String(text || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function findItem(key) {
+    return state.judgments.find(function (item) { return item.key === key; });
+  }
+
+  function showOpenOptions(key) {
+    state.pendingOpenKey = key;
+    var item = findItem(key);
+    document.getElementById('openOptionsTitle').textContent = item ? item.title : 'الحكم';
+
+    // Show/hide options based on permissions
+    var internalBtn = document.getElementById('openInternalBtn');
+    var externalBtn = document.getElementById('openExternalBtn');
+    if (internalBtn) internalBtn.style.display = canOpenInternal() ? 'block' : 'none';
+    if (externalBtn) externalBtn.style.display = canOpenExternal() ? 'block' : 'none';
+
+    document.getElementById('openOptionsModal').classList.add('active');
+  }
+
+  function closeOpenOptions() {
+    document.getElementById('openOptionsModal').classList.remove('active');
+    state.pendingOpenKey = null;
+  }
+
+  function openInternalFromOptions() {
+    var key = state.pendingOpenKey;
+    closeOpenOptions();
+    if (key && canOpenInternal()) prepareAndOpen(key, 'internal');
+  }
+
+  function openExternalFromOptions() {
+    var key = state.pendingOpenKey;
+    closeOpenOptions();
+    if (key && canOpenExternal()) prepareAndOpen(key, 'external');
+  }
+
+  function showOverlay(text, progress) {
+    document.getElementById('downloadStatus').textContent = text || 'جاري التحميل...';
+    document.getElementById('progressBar').style.width = Math.max(0, Math.min(100, progress || 0)) + '%';
+    document.getElementById('downloadOverlay').classList.add('active');
+  }
+
+  function hideOverlay() {
+    document.getElementById('downloadOverlay').classList.remove('active');
+    document.getElementById('progressBar').style.width = '0%';
+  }
+
+  function closeViewer() {
+    document.getElementById('viewerModal').classList.remove('active');
+    document.getElementById('pdfFrame').src = '';
+    state.currentViewerItemKey = null;
+    state.currentViewerUrl = null;
+    updateViewerActionButtons();
+    if (state.objectUrl) {
+      try { URL.revokeObjectURL(state.objectUrl); } catch (e) {}
+      state.objectUrl = null;
+    }
+  }
+
+  function assetViewerUrl(assetPath) {
+    return '../../../' + assetPath;
+  }
+
+  function updateViewerActionButtons() {
+    var hasItem = !!state.currentViewerItemKey;
+    var downloadBtn = document.getElementById('viewerDownloadBtn');
+    var printBtn = document.getElementById('viewerPrintBtn');
+    var externalBtn = document.getElementById('viewerExternalBtn');
+    var reloadBtn = document.getElementById('viewerReloadBtn');
+
+    if (downloadBtn) {
+      var alreadyDownloaded = hasItem && !!state.downloadedFiles[state.currentViewerItemKey];
+      downloadBtn.disabled = !hasItem || !canDownload() || alreadyDownloaded;
+      downloadBtn.textContent = alreadyDownloaded ? '✅ تم التنزيل' : '📥 تنزيل';
+    }
+    if (printBtn) printBtn.disabled = !state.currentViewerUrl;
+    if (externalBtn) externalBtn.disabled = !hasItem || !canOpenExternal();
+    if (reloadBtn) reloadBtn.disabled = !state.currentViewerUrl;
+  }
+
+  function tunePdfViewer(frame) {
+    var attempts = 0;
+    function applyTuning() {
+      attempts += 1;
+      try {
+        var win = frame.contentWindow;
+        if (!win || !win.document) throw new Error('viewer not ready');
+        var doc = win.document;
+        var app = win.PDFViewerApplication;
+        var container = doc.getElementById('viewerContainer');
+        if (container) {
+          container.style.background = '#0f172a';
+        }
+        if (app && app.pdfViewer) {
+          try { app.pdfViewer.currentScaleValue = 'page-width'; } catch (e) {}
+          var secondaryOpen = doc.getElementById('openFile');
+          if (secondaryOpen) secondaryOpen.style.display = 'none';
+          return;
+        }
+      } catch (e) {}
+      if (attempts < 14) setTimeout(applyTuning, 250);
+    }
+    setTimeout(applyTuning, 200);
+  }
+
+  function openPdfViewerWithUrl(title, url, itemKey) {
+    document.getElementById('viewerTitle').textContent = title;
+    var subtitle = document.getElementById('viewerSubtitle');
+    if (subtitle) subtitle.textContent = 'عرض داخلي واضح مع دعم الطباعة والتنزيل وإعادة التحميل.';
+    state.currentViewerItemKey = itemKey || null;
+    state.currentViewerUrl = url || null;
+    updateViewerActionButtons();
+    var fileParam = url;
+    var viewerUrl = 'lib/pdfjs/web/viewer.html?file=' + encodeURIComponent(fileParam) + '#zoom=page-width';
+    var frame = document.getElementById('pdfFrame');
+    frame.onload = function() { tunePdfViewer(frame); };
+    frame.src = '';
+    setTimeout(function() {
+      frame.src = viewerUrl;
+    }, 50);
+    document.getElementById('viewerModal').classList.add('active');
+  }
+
+  function downloadCurrentViewedFile() {
+    if (!state.currentViewerItemKey) {
+      alert('لا يوجد ملف محدد للتنزيل حالياً.');
+      return;
+    }
+    downloadAndSave(state.currentViewerItemKey);
+  }
+
+  function reloadCurrentViewer() {
+    if (!state.currentViewerItemKey) {
+      if (state.currentViewerUrl) {
+        var frame = document.getElementById('pdfFrame');
+        frame.src = frame.src;
+      }
+      return;
+    }
+    prepareAndOpen(state.currentViewerItemKey, 'internal');
+  }
+
+  function openCurrentViewedExternally() {
+    if (!state.currentViewerItemKey) {
+      alert('لا يوجد ملف محدد للفتح الخارجي.');
+      return;
+    }
+    if (!canOpenExternal()) {
+      alert('ليس لديك صلاحية الفتح الخارجي.');
+      return;
+    }
+    prepareAndOpen(state.currentViewerItemKey, 'external');
+  }
+
+  function printCurrentPdf() {
+    var frame = document.getElementById('pdfFrame');
+    if (!frame || !frame.contentWindow) {
+      alert('تعذر الوصول إلى مستند الطباعة حالياً.');
+      return;
+    }
+    try {
+      var win = frame.contentWindow;
+      if (win.PDFViewerApplication && win.PDFViewerApplication.eventBus) {
+        win.PDFViewerApplication.eventBus.dispatch('print');
+        return;
+      }
+      if (typeof win.print === 'function') {
+        win.focus();
+        win.print();
+        return;
+      }
+    } catch (e) {}
+
+    if (state.currentViewerItemKey && canOpenExternal()) {
+      alert('سيتم فتح الملف في تطبيق خارجي لتكملة الطباعة من خلاله.');
+      prepareAndOpen(state.currentViewerItemKey, 'external');
+      return;
+    }
+    alert('تعذر بدء الطباعة على هذا الجهاز حالياً.');
+  }
+
+  function prepareAndOpen(key, mode) {
+    var item = findItem(key);
+    if (!item) return;
+
+    if (state.downloadedFiles[key]) {
+      if (mode === 'internal') openInternalLocal(item);
+      else openExternalLocal(item.localNativeURL || item.localPath);
+      return;
+    }
+
+    if (mode === 'internal') {
+      openRemoteInternal(item);
+      return;
+    }
+    openRemoteExternal(item);
+  }
+
+  function downloadAndSave(key) {
+    if (!canDownload()) { alert('ليس لديك صلاحية التنزيل.'); return; }
+    var item = findItem(key);
+    if (!item) return;
+    if (state.downloadedFiles[key]) return;
+
+    showOverlay('جاري تنزيل الملف وحفظه...', 20);
+    downloadRemoteBlob(item).then(function (blob) {
+      showOverlay('جاري حفظ الملف محلياً...', 70);
+      return writeBlobToAppStorage(item.category, sanitizeFileName(item.name), blob);
+    }).then(function (saved) {
+      state.downloadedFiles[key] = {
+        localPath: saved.localPath,
+        localNativeURL: saved.localNativeURL,
+        localInternalURL: saved.localInternalURL
+      };
+      saveDownloadedFiles();
+      updateDescriptions();
+      renderJudgments();
+      updateViewerActionButtons();
+      hideOverlay();
+      var locationText = saved.storageLabel ? (' في ' + saved.storageLabel) : '';
+      alert('تم تنزيل الملف وحفظه بنجاح' + locationText + '. يمكنك الآن فتحه بدون إنترنت.');
+    }).catch(function (err) {
+      hideOverlay();
+      console.error('Download and save failed:', err);
+      alert('تعذر تنزيل الملف. تأكد من الاتصال بالإنترنت.');
+    });
+  }
+
+  function openInternalLocal(item) {
+    if (!state.deviceReady || !window.resolveLocalFileSystemURL) {
+      if (item.assetPath) {
+        openPdfViewerWithUrl(item.title, assetViewerUrl(item.assetPath), item.key);
+        return;
+      }
+      alert('الفتح المحلي متاح على الهاتف فقط.');
+      return;
+    }
+    showOverlay('جاري فتح الملف...', 50);
+    resolveFirstLocalEntry([item.localInternalURL, item.localPath, item.localNativeURL]).then(function (entry) {
+      hideOverlay();
+      var finalUrl = entry.toInternalURL ? entry.toInternalURL() : entry.toURL();
+      openPdfViewerWithUrl(item.title, finalUrl, item.key);
+    }).catch(function () {
+      hideOverlay();
+      if (item.assetPath) openPdfViewerWithUrl(item.title, assetViewerUrl(item.assetPath), item.key);
+      else alert('تعذر العثور على الملف المحلي.');
+    });
+  }
+
+  function openExternalLocal(url) {
+    if (window.cordova && cordova.plugins && cordova.plugins.fileOpener2) {
+      cordova.plugins.fileOpener2.showOpenWithDialog(url, 'application/pdf', {
+        error: function (e) {
+          console.error('FileOpener2 error:', e);
+          alert('تعذر الفتح الخارجي. تأكد من وجود تطبيق لقراءة PDF على جهازك.');
+        },
+        success: function () {}
+      });
+    } else {
+      alert('ميزة الفتح الخارجي متاحة على الهاتف فقط.');
+    }
+  }
+
+  function openExternalAsset(item) {
+    if (!window.cordova || !cordova.file) {
+      if (item.assetPath) {
+        openPdfViewerWithUrl(item.title, assetViewerUrl(item.assetPath), item.key);
+      } else {
+        alert('الفتح الخارجي متاح على الهاتف فقط.');
+      }
+      return;
+    }
+    showOverlay('جاري تجهيز الملف للفتح الخارجي...', 30);
+
+    var cleanAssetPath = item.assetPath.replace(/^\/+/, '');
+    var sourceUrl = cordova.file.applicationDirectory + 'www/' + cleanAssetPath;
+    var targetDir = cordova.file.externalCacheDirectory || cordova.file.cacheDirectory || cordova.file.externalDataDirectory || cordova.file.dataDirectory;
+    var targetName = sanitizeFileName(item.name);
+
+    window.resolveLocalFileSystemURL(sourceUrl, function (fileEntry) {
+      window.resolveLocalFileSystemURL(targetDir, function (dirEntry) {
+        fileEntry.copyTo(dirEntry, targetName, function (newFileEntry) {
+          hideOverlay();
+          var finalUrl = newFileEntry.nativeURL || newFileEntry.toURL();
+          if (finalUrl.indexOf('file://') !== 0 && finalUrl.indexOf('/') === 0) finalUrl = 'file://' + finalUrl;
+          openExternalLocal(finalUrl);
+        }, function (err) {
+          hideOverlay();
+          console.error('copyTo failed:', err);
+          if (item.assetPath) openPdfViewerWithUrl(item.title, assetViewerUrl(item.assetPath), item.key);
+          else alert('تعذر تجهيز الملف الخارجي.');
+        });
+      }, function (err) {
+        hideOverlay();
+        console.error('resolveLocalFileSystemURL targetDir failed:', err);
+        alert('تعذر الوصول لمجلد التخزين.');
+      });
+    }, function (err) {
+      hideOverlay();
+      console.error('resolveLocalFileSystemURL sourceUrl failed:', sourceUrl, err);
+      if (item.assetPath) openPdfViewerWithUrl(item.title, assetViewerUrl(item.assetPath), item.key);
+      else alert('تعذر العثور على الملف الأصلي.');
+    });
+  }
+
+  function ensureDirectory(rootUrl, pathParts) {
+    return new Promise(function (resolve, reject) {
+      window.resolveLocalFileSystemURL(rootUrl, function (dirEntry) {
+        var current = dirEntry;
+        function next(index) {
+          if (index >= pathParts.length) return resolve(current);
+          current.getDirectory(pathParts[index], { create: true }, function (child) {
+            current = child;
+            next(index + 1);
+          }, reject);
+        }
+        next(0);
+      }, reject);
+    });
+  }
+
+  function getPreferredStorageTargets(category) {
+    var targets = [];
+    if (!window.cordova || !cordova.file) return targets;
+    if (cordova.file.externalRootDirectory) {
+      targets.push({
+        root: cordova.file.externalRootDirectory,
+        pathParts: ['Download', 'بيانات محكمة القفر الابتدائية', category],
+        storageLabel: 'مجلد التنزيلات'
+      });
+    }
+    if (cordova.file.externalDataDirectory) {
+      targets.push({
+        root: cordova.file.externalDataDirectory,
+        pathParts: ['pdf-cache', category],
+        storageLabel: 'مساحة التطبيق الخارجية'
+      });
+    }
+    if (cordova.file.dataDirectory) {
+      targets.push({
+        root: cordova.file.dataDirectory,
+        pathParts: ['pdf-cache', category],
+        storageLabel: 'مساحة التطبيق الداخلية'
+      });
+    }
+    return targets;
+  }
+
+  function writeBlobToStorageTarget(target, fileName, blob) {
+    return new Promise(function (resolve, reject) {
+      ensureDirectory(target.root, target.pathParts).then(function (dirEntry) {
+        dirEntry.getFile(fileName, { create: true, exclusive: false }, function (fileEntry) {
+          fileEntry.createWriter(function (writer) {
+            var writingBlob = false;
+            writer.onerror = reject;
+            writer.onwriteend = function () {
+              if (!writingBlob) {
+                writingBlob = true;
+                try { writer.seek(0); } catch (e) {}
+                writer.write(blob);
+                return;
+              }
+              resolve({
+                fileEntry: fileEntry,
+                localPath: fileEntry.toURL(),
+                localNativeURL: fileEntry.nativeURL || fileEntry.toURL(),
+                localInternalURL: fileEntry.toInternalURL ? fileEntry.toInternalURL() : fileEntry.toURL(),
+                storageLabel: target.storageLabel
+              });
+            };
+            writer.truncate(0);
+          }, reject);
+        }, reject);
+      }).catch(reject);
+    });
+  }
+
+  function writeBlobToAppStorage(category, fileName, blob) {
+    return new Promise(function (resolve, reject) {
+      if (!window.cordova || !cordova.file) {
+        reject(new Error('Cordova file API unavailable'));
+        return;
+      }
+      var targets = getPreferredStorageTargets(category);
+      function tryTarget(index, lastError) {
+        if (index >= targets.length) {
+          reject(lastError || new Error('No writable storage target found'));
+          return;
+        }
+        writeBlobToStorageTarget(targets[index], fileName, blob).then(resolve).catch(function (err) {
+          console.warn('Storage target failed:', targets[index].storageLabel, err);
+          tryTarget(index + 1, err);
+        });
+      }
+      tryTarget(0, null);
+    });
+  }
+
+  function resolveFirstLocalEntry(candidates) {
+    candidates = (candidates || []).filter(function (value) { return !!value; });
+    return new Promise(function (resolve, reject) {
+      if (!window.resolveLocalFileSystemURL || !candidates.length) {
+        reject(new Error('No local candidates available'));
+        return;
+      }
+      var index = 0;
+      function tryNext() {
+        if (index >= candidates.length) {
+          reject(new Error('Unable to resolve local entry'));
+          return;
+        }
+        var current = candidates[index++];
+        window.resolveLocalFileSystemURL(current, resolve, tryNext);
+      }
+      tryNext();
+    });
+  }
+
+
+  function supportsInternalPreview(item) {
+    return !!item && (isPdfItem(item) || isDocxItem(item) || isXlsxItem(item));
+  }
+
+  function createSharedUploadDescription(record) {
+    var parts = ['ملف تمت إضافته مركزياً من الإدارة'];
+    if (record && record.createdBy) parts.push('بواسطة ' + record.createdBy);
+    parts.push('ويظهر للمستخدمين المصرّح لهم داخل هذا التبويب.');
+    return parts.join(' ');
+  }
+
+  function buildSharedItem(record) {
+    var normalized = normalizeSharedFileRecord(record);
+    normalized.description = normalized.description || createSharedUploadDescription(normalized);
+    normalized.source = 'shared';
+    return buildItem(normalized, normalized.category);
+  }
+
+  function getSharedItemsList() {
+    return Object.keys(state.sharedFiles || {}).map(function(key) {
+      return buildSharedItem(state.sharedFiles[key]);
+    });
+  }
+
+  function mergeSharedItemsIntoList(baseItems) {
+    var map = {};
+    (baseItems || []).forEach(function(item) { map[item.key] = item; });
+    getSharedItemsList().forEach(function(item) { map[item.key] = item; });
+    return Object.keys(map).map(function(key) { return map[key]; }).sort(function(a, b) {
+      return Number(b.timestamp || 0) - Number(a.timestamp || 0);
+    });
+  }
+
+  function mergeSharedFilesIntoJudgments() {
+    var baseItems = (state.judgments || []).filter(function(item) { return !item.isSharedUpload; });
+    state.judgments = mergeSharedItemsIntoList(baseItems);
+    updateDescriptions();
+    persistLiveItems(state.judgments);
+    updateStats();
+    renderJudgments();
+  }
+
+  function sleep(ms) {
+    return new Promise(function(resolve) { setTimeout(resolve, ms); });
+  }
+
+  function humanFileSize(bytes) {
+    var num = Number(bytes || 0);
+    if (!num) return '0 ب';
+    var units = ['ب', 'ك.ب', 'م.ب', 'ج.ب'];
+    var idx = 0;
+    while (num >= 1024 && idx < units.length - 1) {
+      num /= 1024;
+      idx += 1;
+    }
+    return (idx === 0 ? Math.round(num) : num.toFixed(num >= 10 ? 1 : 2)) + ' ' + units[idx];
+  }
+
+  function uint8ToBase64(bytes) {
+    var chunk = 0x8000;
+    var binary = '';
+    for (var i = 0; i < bytes.length; i += chunk) {
+      var sub = bytes.subarray(i, i + chunk);
+      binary += String.fromCharCode.apply(null, sub);
+    }
+    return btoa(binary);
+  }
+
+  function base64ToUint8Array(base64) {
+    var binary = atob(base64 || '');
+    var len = binary.length;
+    var bytes = new Uint8Array(len);
+    for (var i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+  }
+
+  function absoluteJsonBlobUrl(path) {
+    var value = String(path || '');
+    if (!value) return '';
+    return /^https?:\/\//i.test(value) ? value : ('https://jsonblob.com' + value);
+  }
+
+  async function createJsonBlobRecord(payload) {
+    var attempts = 0;
+    while (attempts < 6) {
+      attempts += 1;
+      var response = await fetch('https://jsonblob.com/api/jsonBlob', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (response.ok) {
+        var location = response.headers.get('Location') || response.headers.get('X-jsonblob-id') || '';
+        if (location && location.indexOf('/api/jsonBlob/') !== 0 && !/^https?:\/\//i.test(location)) {
+          location = '/api/jsonBlob/' + location;
+        }
+        if (!location) throw new Error('Missing blob location header');
+        return absoluteJsonBlobUrl(location);
+      }
+      if (response.status === 429) {
+        await sleep(450 * attempts);
+        continue;
+      }
+      throw new Error('Blob upload failed with HTTP ' + response.status);
+    }
+    throw new Error('Blob upload rate limited عدة مرات');
+  }
+
+  async function uploadSharedFileChunks(file, onProgress) {
+    var arrayBuffer = await arrayBufferFromBlob(file);
+    var bytes = new Uint8Array(arrayBuffer);
+    var rawChunkSize = 180 * 1024;
+    var total = Math.max(1, Math.ceil(bytes.length / rawChunkSize));
+    var urls = [];
+    for (var i = 0; i < total; i++) {
+      var start = i * rawChunkSize;
+      var end = Math.min(bytes.length, start + rawChunkSize);
+      var part = bytes.subarray(start, end);
+      var url = await createJsonBlobRecord({
+        schemaVersion: 1,
+        encoding: 'base64',
+        data: uint8ToBase64(part),
+        index: i,
+        total: total,
+        fileName: file.name || 'file',
+        mimeType: file.type || inferMimeType(file.name),
+        createdAt: nowIso()
+      });
+      urls.push(url);
+      if (typeof onProgress === 'function') onProgress(i + 1, total);
+      await sleep(180);
+    }
+    return urls;
+  }
+
+  async function downloadSharedBlob(item) {
+    var chunkUrls = Array.isArray(item && item.chunkUrls) ? item.chunkUrls : [];
+    if (!chunkUrls.length) throw new Error('No shared chunks found');
+    var chunks = [];
+    for (var i = 0; i < chunkUrls.length; i++) {
+      var response = await fetch(chunkUrls[i], { cache: 'no-store' });
+      if (!response.ok) throw new Error('Chunk fetch failed HTTP ' + response.status);
+      var raw = await response.json();
+      if (!raw || raw.encoding !== 'base64' || !raw.data) throw new Error('Invalid chunk payload');
+      chunks.push(base64ToUint8Array(raw.data));
+    }
+    var totalSize = chunks.reduce(function(sum, part) { return sum + part.length; }, 0);
+    var merged = new Uint8Array(totalSize);
+    var offset = 0;
+    chunks.forEach(function(part) { merged.set(part, offset); offset += part.length; });
+    return new Blob([merged], { type: (item && item.mimeType) || inferMimeType(item && item.name) });
+  }
+
+  async function uploadSharedFileToCentral(tabId, file, options) {
+    options = options || {};
+    if (!requireGeneralAdmin() || !requireOnlineAdminSync()) return;
+    if (!file) return;
+    var tabMeta = TAB_META[tabId];
+    if (!tabMeta) {
+      alert('تعذر تحديد التبويب المستهدف.');
+      return;
+    }
+    var safeName = sanitizeFileName(file.name || 'file');
+    showOverlay('جاري تجهيز الملف للرفع المركزي...', 8);
+    try {
+      var payload = await fetchCentralSnapshot();
+      if (!payload) throw new Error('central payload unavailable');
+      showOverlay('جاري رفع الملف المركزي: 0%', 12);
+      var chunkUrls = await uploadSharedFileChunks(file, function(done, total) {
+        var progress = Math.min(88, 20 + Math.round((done / total) * 58));
+        showOverlay('جاري رفع الملف المركزي: ' + Math.round((done / total) * 100) + '%', progress);
+      });
+      var sharedFiles = getSharedFilesFromPayload(payload);
+      var currentUser = getCurrentUser() || state.currentUser || {};
+      var record = normalizeSharedFileRecord({
+        key: makeItemKey(tabMeta.category, safeName + '__' + Date.now()),
+        category: tabMeta.category,
+        name: safeName,
+        title: titleFromName(safeName) || safeName,
+        description: 'ملف تمت إضافته مركزياً من الإدارة ويظهر لكل المستخدمين المخوّلين داخل هذا التبويب. الحجم: ' + humanFileSize(file.size),
+        size: Number(file.size || 0),
+        timestamp: Date.now(),
+        mimeType: file.type || inferMimeType(safeName),
+        extension: getFileExtension(safeName),
+        createdAt: nowIso(),
+        createdBy: currentUser.displayName || currentUser.username || 'المدير',
+        chunkUrls: chunkUrls,
+        isSharedUpload: true
+      });
+      sharedFiles[record.key] = record;
+      showOverlay('جاري تثبيت الملف داخل الصفحة مركزياً...', 92);
+      var saved = await saveCentralSnapshot(buildCentralPayload(getRemoteUsersFromPayload(payload), payload.deletedUsers || {}, payload.uiConfig || null, sharedFiles, payload.fileOverrides || {}));
+      reconcileUsersFromCentral(saved);
+      hideOverlay();
+      if (!options.silent) {
+        alert('✅ تم إضافة الملف "' + safeName + '" إلى تبويب ' + tabMeta.label + ' وسيظهر الآن لكل المستخدمين المصرح لهم.');
+      }
+    } catch (err) {
+      hideOverlay();
+      console.error('Shared upload failed:', err);
+      if (!options.silent) {
+        alert('❌ تعذر رفع الملف مركزياً حالياً. تأكد من الاتصال بالإنترنت ثم حاول مرة أخرى.');
+      }
+      throw err;
+    }
+  }
+
+  function triggerTabFilePicker(tabId) {
+    if (!requireGeneralAdmin() || !requireOnlineAdminSync()) return;
+    var picker = document.getElementById('sharedFilePicker');
+    if (!picker) {
+      alert('أداة اختيار الملفات غير متاحة حالياً.');
+      return;
+    }
+    state.pendingUploadTab = tabId;
+    picker.value = '';
+    picker.click();
+  }
+
+  async function uploadMultipleSharedFilesToCentral(tabId, files) {
+    var list = Array.prototype.slice.call(files || []).filter(function(file) { return !!file; });
+    if (!list.length) return;
+    if (list.length === 1) {
+      await uploadSharedFileToCentral(tabId, list[0]);
+      return;
+    }
+    var successCount = 0;
+    var failedNames = [];
+    for (var i = 0; i < list.length; i++) {
+      var currentFile = list[i];
+      try {
+        await uploadSharedFileToCentral(tabId, currentFile, { silent: true });
+        successCount += 1;
+      } catch (err) {
+        console.error('Batch shared upload failed:', currentFile && currentFile.name, err);
+        failedNames.push((currentFile && currentFile.name) ? currentFile.name : ('ملف #' + (i + 1)));
+      }
+    }
+    if (!failedNames.length) {
+      alert('✅ تم رفع ' + successCount + ' ملفات دفعة واحدة بنجاح إلى هذا التبويب.');
+      return;
+    }
+    if (!successCount) {
+      alert('❌ تعذر رفع الملفات المختارة حالياً. تأكد من الاتصال بالإنترنت ثم حاول مرة أخرى.');
+      return;
+    }
+    alert('⚠️ تم رفع ' + successCount + ' ملفات، وتعذر رفع ' + failedNames.length + ' ملف/ملفات: ' + failedNames.join('، '));
+  }
+
+  function handleSharedFileSelected(event) {
+    var picker = event && event.target ? event.target : document.getElementById('sharedFilePicker');
+    var files = picker && picker.files ? Array.prototype.slice.call(picker.files) : [];
+    var tabId = state.pendingUploadTab || state.currentTab;
+    state.pendingUploadTab = null;
+    if (!files.length) return;
+    uploadMultipleSharedFilesToCentral(tabId, files);
+  }
+
+  async function promptRenameItem(key) {
+    if (!requireGeneralAdmin() || !requireOnlineAdminSync()) return;
+    var item = findItem(key);
+    if (!item) {
+      alert('تعذر العثور على الملف المطلوب.');
+      return;
+    }
+    var newTitle = prompt('اكتب الاسم الجديد الذي سيظهر لجميع المستخدمين:', item.title || item.name || '');
+    if (newTitle === null) return;
+    newTitle = String(newTitle || '').trim();
+    if (!newTitle) {
+      alert('لا يمكن حفظ اسم فارغ.');
+      return;
+    }
+    showOverlay('جاري تحديث اسم الملف مركزياً...', 40);
+    try {
+      var payload = await fetchCentralSnapshot();
+      if (!payload) throw new Error('central payload unavailable');
+      var sharedFiles = getSharedFilesFromPayload(payload);
+      var fileOverrides = getFileOverridesFromPayload(payload);
+      var currentUser = getCurrentUser() || state.currentUser || {};
+      var currentOverride = Object.assign({}, fileOverrides[key] || {});
+      currentOverride.title = newTitle;
+      currentOverride.hidden = false;
+      currentOverride.updatedAt = nowIso();
+      currentOverride.updatedBy = currentUser.displayName || currentUser.username || 'المدير';
+      fileOverrides[key] = currentOverride;
+      if (sharedFiles[key]) {
+        sharedFiles[key].title = newTitle;
+      }
+      var saved = await saveCentralSnapshot(buildCentralPayload(getRemoteUsersFromPayload(payload), payload.deletedUsers || {}, payload.uiConfig || null, sharedFiles, fileOverrides));
+      reconcileUsersFromCentral(saved);
+      hideOverlay();
+      alert('✅ تم تحديث اسم الملف وسيظهر الاسم الجديد لجميع المستخدمين.');
+    } catch (err) {
+      hideOverlay();
+      console.error('Rename file failed:', err);
+      alert('❌ تعذر تحديث اسم الملف حالياً. حاول مرة أخرى عند توفر الإنترنت.');
+    }
+  }
+
+  async function deleteCentralFile(key) {
+    if (!requireGeneralAdmin() || !requireOnlineAdminSync()) return;
+    var item = findItem(key);
+    if (!item) {
+      alert('تعذر العثور على الملف المطلوب.');
+      return;
+    }
+    if (!confirm('هل تريد حذف الملف "' + (item.title || item.name || 'هذا الملف') + '" من الصفحة لدى جميع المستخدمين؟')) {
+      return;
+    }
+    showOverlay('جاري حذف الملف مركزياً...', 45);
+    try {
+      var payload = await fetchCentralSnapshot();
+      if (!payload) throw new Error('central payload unavailable');
+      var sharedFiles = getSharedFilesFromPayload(payload);
+      var fileOverrides = getFileOverridesFromPayload(payload);
+      var currentUser = getCurrentUser() || state.currentUser || {};
+      var currentOverride = Object.assign({}, fileOverrides[key] || {});
+      currentOverride.hidden = true;
+      currentOverride.updatedAt = nowIso();
+      currentOverride.updatedBy = currentUser.displayName || currentUser.username || 'المدير';
+      fileOverrides[key] = currentOverride;
+      if (sharedFiles[key]) {
+        delete sharedFiles[key];
+      }
+      if (state.currentViewerItemKey === key) {
+        closeViewer();
+      }
+      var saved = await saveCentralSnapshot(buildCentralPayload(getRemoteUsersFromPayload(payload), payload.deletedUsers || {}, payload.uiConfig || null, sharedFiles, fileOverrides));
+      reconcileUsersFromCentral(saved);
+      hideOverlay();
+      alert('✅ تم حذف الملف من الصفحة مركزياً وسيختفي لدى جميع المستخدمين.');
+    } catch (err) {
+      hideOverlay();
+      console.error('Delete file failed:', err);
+      alert('❌ تعذر حذف الملف حالياً. حاول مرة أخرى عند توفر الإنترنت.');
+    }
+  }
+
+  function listRemoteCategory(category) {
+    if (!window.mega || !window.mega.File || !FOLDERS[category]) {
+      return Promise.reject(new Error('MEGA library unavailable'));
+    }
+    var folder = window.mega.File.fromURL(FOLDERS[category]);
+    return folder.loadAttributes().then(function () {
+      return (folder.children || []).filter(function (file) {
+        return !file.directory && /\.pdf$/i.test(file.name || '');
+      });
+    });
+  }
+
+  function bufferToBlob(buffer) {
+    if (buffer instanceof Blob) return buffer;
+    if (buffer instanceof ArrayBuffer) return new Blob([buffer], { type: 'application/pdf' });
+    if (buffer && buffer.buffer) {
+      var view = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer.buffer, buffer.byteOffset || 0, buffer.byteLength || buffer.length || 0);
+      return new Blob([view], { type: 'application/pdf' });
+    }
+    return new Blob([buffer], { type: 'application/pdf' });
+  }
+
+  function fetchRemoteFile(item) {
+    return listRemoteCategory(item.category).then(function (files) {
+      var remoteFile = (files || []).find(function (file) {
+        return String(file.name || '') === String(item.name || '');
+      });
+      if (!remoteFile) throw new Error('Remote file not found');
+      return remoteFile;
+    });
+  }
+
+  function downloadRemoteBlob(item) {
+    return fetchRemoteFile(item).then(function (remoteFile) {
+      return remoteFile.downloadBuffer({ forceHttps: true });
+    }).then(bufferToBlob);
+  }
+
+  function openRemoteInternal(item) {
+    showOverlay('جاري تحميل الملف من السحابة...', 35);
+    downloadRemoteBlob(item).then(function (blob) {
+      if (state.objectUrl) {
+        try { URL.revokeObjectURL(state.objectUrl); } catch (e) {}
+        state.objectUrl = null;
+      }
+      state.objectUrl = URL.createObjectURL(blob);
+      hideOverlay();
+      openPdfViewerWithUrl(item.title, state.objectUrl, item.key);
+    }).catch(function (err) {
+      hideOverlay();
+      console.error('Cloud open failed:', err);
+      alert('تعذر تحميل الملف من السحابة. تأكد من الاتصال بالإنترنت ثم حاول مرة أخرى.');
+    });
+  }
+
+  function writeBlobToTempCache(fileName, blob) {
+    return new Promise(function (resolve, reject) {
+      if (!window.cordova || !cordova.file) {
+        reject(new Error('Cordova file API unavailable'));
+        return;
+      }
+      var root = cordova.file.externalCacheDirectory || cordova.file.cacheDirectory || cordova.file.externalDataDirectory || cordova.file.dataDirectory;
+      ensureDirectory(root, ['temp-open']).then(function (dirEntry) {
+        dirEntry.getFile(fileName, { create: true, exclusive: false }, function (fileEntry) {
+          fileEntry.createWriter(function (writer) {
+            var writingBlob = false;
+            writer.onerror = reject;
+            writer.onwriteend = function () {
+              if (!writingBlob) {
+                writingBlob = true;
+                try { writer.seek(0); } catch (e) {}
+                writer.write(blob);
+                return;
+              }
+              resolve({
+                fileEntry: fileEntry,
+                localPath: fileEntry.toURL(),
+                localNativeURL: fileEntry.nativeURL || fileEntry.toURL(),
+                localInternalURL: fileEntry.toInternalURL ? fileEntry.toInternalURL() : fileEntry.toURL()
+              });
+            };
+            writer.truncate(0);
+          }, reject);
+        }, reject);
+      }).catch(reject);
+    });
+  }
+
+  function openRemoteExternal(item) {
+    if (!state.deviceReady || !window.cordova || !cordova.file) {
+      openRemoteInternal(item);
+      return;
+    }
+    showOverlay('جاري تحميل الملف من السحابة للفتح الخارجي...', 35);
+    downloadRemoteBlob(item).then(function (blob) {
+      return writeBlobToTempCache(sanitizeFileName(item.name), blob);
+    }).then(function (saved) {
+      hideOverlay();
+      item.localPath = saved.localPath;
+      item.localNativeURL = saved.localNativeURL;
+      item.localInternalURL = saved.localInternalURL;
+      openExternalLocal(saved.localNativeURL || saved.localPath);
+    }).catch(function (err) {
+      hideOverlay();
+      console.error('Cloud external open failed:', err);
+      alert('تعذر تجهيز الملف من السحابة للفتح الخارجي.');
+    });
+  }
+
+  function syncAllFolders(silent) {
+    if (state.syncInProgress || !window.mega || !window.mega.File) return Promise.resolve();
+
+    var oldKeys = {};
+    var currentRemoteItems = state.judgments.filter(function(it) { return !it.isSharedUpload; });
+    currentRemoteItems.forEach(function(it) { oldKeys[it.key] = true; });
+    var isFirstSync = currentRemoteItems.length === 0;
+
+    state.syncInProgress = true;
+    var showProgress = !silent;
+    var categories = TAB_IDS.map(function(tabId) { return TAB_META[tabId].category; }).filter(function(category) { return !!FOLDERS[category]; });
+    if (showProgress) showOverlay('جاري مزامنة الفهرس السحابي...', 10);
+
+    return Promise.allSettled(categories.map(listRemoteCategory))
+      .then(function (results) {
+        var liveItems = [];
+        var newCount = 0;
+
+        categories.forEach(function (category, index) {
+          var result = results[index];
+          if (!result || result.status !== 'fulfilled') {
+            console.warn('Category sync failed:', category, result && result.reason ? result.reason : result);
+            return;
+          }
+
+          result.value.forEach(function (remoteFile) {
+            var key = makeItemKey(category, remoteFile.name);
+            if (!isFirstSync && !oldKeys[key]) newCount++;
+
+            liveItems.push(buildItem({
+              key: key,
+              category: category,
+              name: remoteFile.name,
+              size: remoteFile.size || 0,
+              timestamp: remoteFile.timestamp || 0,
+              description: 'ملف سحابي يتم فتحه مباشرة من السحابة.'
+            }, category));
+          });
+        });
+
+        state.judgments = mergeSharedItemsIntoList(liveItems);
+        updateDescriptions();
+        persistLiveItems(state.judgments);
+        updateStats();
+        renderJudgments();
+
+        if (newCount > 0) {
+          alert('تم تحديث البيانات: تم إضافة ' + newCount + ' ملفات جديدة في السحابة.');
+        }
+      })
+      .catch(function (err) {
+        console.warn('Sync error:', err);
+      })
+      .finally(function () {
+        state.syncInProgress = false;
+        if (showProgress) hideOverlay();
+      });
+  }
+
+  function initData() {
+    loadPreferences();
+    state.judgments = cachedItems();
+    updateDescriptions();
+    updateStats();
+    renderJudgments();
+  }
+
+  function updateConnectionStatus() {
+    var statusEl = document.getElementById('connectionStatus');
+    if (!statusEl) return;
+    var isOffline = navigator.connection && navigator.connection.type === 'none';
+    if (isOffline) {
+      statusEl.innerHTML = '<span>🚫</span> غير متصل';
+      statusEl.classList.add('offline');
+    } else {
+      statusEl.innerHTML = '<span>🌐</span> متصل';
+      statusEl.classList.remove('offline');
+    }
+  }
+
+  function onDeviceReady() {
+    state.deviceReady = true;
+    updateConnectionStatus();
+    document.addEventListener('online', function () { updateConnectionStatus(); syncWithCentralServer(); }, false);
+    document.addEventListener('offline', updateConnectionStatus, false);
+
+    if (navigator.connection && navigator.connection.type !== 'none') {
+      syncAllFolders(true);
+      syncWithCentralServer();
+    }
+    document.addEventListener('pause', function () {
+      persistLiveItems(state.judgments || []);
+    }, false);
+    document.addEventListener('resume', function () {
+      updateConnectionStatus();
+      if (navigator.connection && navigator.connection.type !== 'none') {
+        syncAllFolders(true);
+        syncWithCentralServer();
+      }
+    }, false);
+  }
+
+  function init() {
+    initTheme();
+    initUsers();
+    applyUiConfig(getStoredUiConfig());
+    initData();
+    checkAuth();
+    syncCurrentUserRecord(getCurrentUser());
+    applyAdminVisibilityLock();
+    
+    // Start central sync
+    syncWithCentralServer();
+    setInterval(syncWithCentralServer, CENTRAL_SYNC.syncIntervalMs);
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) syncWithCentralServer();
+    });
+    window.addEventListener('focus', function () { syncWithCentralServer(); });
+    window.addEventListener('beforeunload', function () { persistLiveItems(state.judgments || []); });
+    window.addEventListener('pagehide', function () { persistLiveItems(state.judgments || []); });
+
+    document.getElementById('loginBtn').addEventListener('click', handleLogin);
+    document.getElementById('passwordInput').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') handleLogin();
+    });
+    document.getElementById('usernameInput').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        var passwordInput = document.getElementById('passwordInput');
+        if (passwordInput) passwordInput.focus();
+      }
+    });
+
+    // Logout button
+    var logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) logoutBtn.addEventListener('click', logout);
+
+    // Admin panel button
+    var adminBtn = document.getElementById('adminPanelBtn');
+    if (adminBtn) adminBtn.addEventListener('click', showAdminPanel);
+
+    var permissionSyncBtn = document.getElementById('permissionSyncBtn');
+    if (permissionSyncBtn) permissionSyncBtn.addEventListener('click', handleManualPermissionSync);
+    setPermissionSyncButtonState(false);
+
+    var fullSyncBtn = document.getElementById('fullSyncBtn');
+    if (fullSyncBtn) fullSyncBtn.addEventListener('click', handleManualFullSync);
+    setFullSyncButtonState(false);
+
+    var sourceCodeEditorBtn = document.getElementById('sourceCodeEditorBtn');
+    if (sourceCodeEditorBtn) sourceCodeEditorBtn.addEventListener('click', showSourceCodeEditorPanel);
+
+    var serverConfigEditorBtn = document.getElementById('serverConfigEditorBtn');
+    if (serverConfigEditorBtn) serverConfigEditorBtn.addEventListener('click', showServerConfigEditorPanel);
+
+    var serverConfigEditorCloseBtn = document.getElementById('serverConfigEditorCloseBtn');
+    if (serverConfigEditorCloseBtn) serverConfigEditorCloseBtn.addEventListener('click', closeServerConfigEditorPanel);
+
+    var cancelServerConfigBtn = document.getElementById('cancelServerConfigBtn');
+    if (cancelServerConfigBtn) cancelServerConfigBtn.addEventListener('click', closeServerConfigEditorPanel);
+
+    var saveServerConfigBtn = document.getElementById('saveServerConfigBtn');
+    if (saveServerConfigBtn) saveServerConfigBtn.addEventListener('click', saveServerConfigChanges);
+
+    var resetServerConfigBtn = document.getElementById('resetServerConfigBtn');
+    if (resetServerConfigBtn) resetServerConfigBtn.addEventListener('click', resetServerConfigOverride);
+
+    var sourceCodeEditorCloseBtn = document.getElementById('sourceCodeEditorCloseBtn');
+    if (sourceCodeEditorCloseBtn) sourceCodeEditorCloseBtn.addEventListener('click', closeSourceCodeEditorPanel);
+
+    var cancelSourceCodeBtn = document.getElementById('cancelSourceCodeBtn');
+    if (cancelSourceCodeBtn) cancelSourceCodeBtn.addEventListener('click', closeSourceCodeEditorPanel);
+
+    var saveSourceCodeBtn = document.getElementById('saveSourceCodeBtn');
+    if (saveSourceCodeBtn) saveSourceCodeBtn.addEventListener('click', saveSourceCodeChanges);
+
+    var resetSourceCodeBtn = document.getElementById('resetSourceCodeBtn');
+    if (resetSourceCodeBtn) resetSourceCodeBtn.addEventListener('click', resetSourceCodeToDefault);
+
+    var tabSettingsBtn = document.getElementById('tabSettingsBtn');
+    if (tabSettingsBtn) tabSettingsBtn.addEventListener('click', showTabSettingsPanel);
+
+    var tabSettingsCloseBtn = document.getElementById('tabSettingsCloseBtn');
+    if (tabSettingsCloseBtn) tabSettingsCloseBtn.addEventListener('click', closeTabSettingsPanel);
+
+    var saveTabSettingsBtn = document.getElementById('saveTabSettingsBtn');
+    if (saveTabSettingsBtn) saveTabSettingsBtn.addEventListener('click', saveTabSettings);
+
+    var sharedFilePicker = document.getElementById('sharedFilePicker');
+    if (sharedFilePicker) sharedFilePicker.addEventListener('change', handleSharedFileSelected);
+
+    var cancelTabSettingsBtn = document.getElementById('cancelTabSettingsBtn');
+    if (cancelTabSettingsBtn) cancelTabSettingsBtn.addEventListener('click', closeTabSettingsPanel);
+
+    // Admin panel close
+    var adminClose = document.getElementById('adminCloseBtn');
+    if (adminClose) adminClose.addEventListener('click', closeAdminPanel);
+
+    // Create user button
+    var createUserBtn = document.getElementById('createUserBtn');
+    if (createUserBtn) createUserBtn.addEventListener('click', createUser);
+
+    switchTab('tab1');
+    applyTabPermissions();
+    var globalSearchInput = document.getElementById('globalSearchInput');
+    var tabSearchInput = document.getElementById('tabSearchInput');
+    if (globalSearchInput) globalSearchInput.addEventListener('input', handleGlobalSearch);
+    if (tabSearchInput) tabSearchInput.addEventListener('input', handleTabSearch);
+    bindSettingsMenuActions();
+    updateClock();
+    setInterval(updateClock, 1000);
+    updateSearchInputsUI();
+    syncSettingsMenuVisibility();
+    document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+    state.appBooted = true;
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        closeOpenOptions();
+        closeViewer();
+        closeAdminPanel();
+        closeTabSettingsPanel();
+        closeSourceCodeEditorPanel();
+        closeServerConfigEditorPanel();
+      }
+    });
+
+    document.addEventListener('click', function(event) {
+      if (!event.target.closest('.settings-container')) closeDropdown();
+    });
+
+    document.addEventListener('click', function (e) {
+      if (isGeneralAdmin(state.currentUser)) return;
+      var adminBtnTarget = e.target && e.target.closest ? e.target.closest('#adminPanelBtn') : null;
+      var adminPanelTarget = e.target && e.target.closest ? e.target.closest('#adminPanel') : null;
+      var tabSettingsBtnTarget = e.target && e.target.closest ? e.target.closest('#tabSettingsBtn') : null;
+      var tabSettingsPanelTarget = e.target && e.target.closest ? e.target.closest('#tabSettingsPanel') : null;
+      var sourceEditorBtnTarget = e.target && e.target.closest ? e.target.closest('#sourceCodeEditorBtn') : null;
+      var sourceEditorPanelTarget = e.target && e.target.closest ? e.target.closest('#sourceCodeEditorPanel') : null;
+      var serverConfigBtnTarget = e.target && e.target.closest ? e.target.closest('#serverConfigEditorBtn') : null;
+      var serverConfigPanelTarget = e.target && e.target.closest ? e.target.closest('#serverConfigEditorPanel') : null;
+      if (adminBtnTarget || adminPanelTarget || tabSettingsBtnTarget || tabSettingsPanelTarget || sourceEditorBtnTarget || sourceEditorPanelTarget || serverConfigBtnTarget || serverConfigPanelTarget) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeAdminPanel();
+      }
+    }, true);
+
+    if (window.cordova) {
+      document.addEventListener('deviceready', function () {
+        onDeviceReady();
+        document.addEventListener('backbutton', function () {
+          var adminPanel = document.getElementById('adminPanel');
+          if (adminPanel && adminPanel.classList.contains('active')) {
+            closeAdminPanel();
+            return;
+          }
+          var tabSettingsPanel = document.getElementById('tabSettingsPanel');
+          if (tabSettingsPanel && tabSettingsPanel.classList.contains('active')) {
+            closeTabSettingsPanel();
+            return;
+          }
+          var sourceCodeEditorPanel = document.getElementById('sourceCodeEditorPanel');
+          if (sourceCodeEditorPanel && sourceCodeEditorPanel.classList.contains('active')) {
+            closeSourceCodeEditorPanel();
+            return;
+          }
+          var serverConfigEditorPanel = document.getElementById('serverConfigEditorPanel');
+          if (serverConfigEditorPanel && serverConfigEditorPanel.classList.contains('active')) {
+            closeServerConfigEditorPanel();
+            return;
+          }
+          closeOpenOptions();
+          closeViewer();
+        }, false);
+      }, false);
+    } else {
+      setTimeout(function () { syncAllFolders(true); }, 800);
+    }
+  }
+
+
+
+  /* ===== EXTENDED CLOUD DOCUMENT SUPPORT: PDF / DOCX / XLSX ===== */
+  function getFileExtension(name) {
+    var match = String(name || '').toLowerCase().match(/\.([a-z0-9]+)$/i);
+    return match ? match[1] : '';
+  }
+
+  function stripSupportedExtension(value) {
+    return String(value || '').replace(/\.[a-z0-9]{1,8}$/i, '');
+  }
+
+  function normalizeKeyText(value) {
+    return stripSupportedExtension(value)
+      .replace(/[_\-]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+  }
+
+  function titleFromName(name) {
+    return stripSupportedExtension(name)
+      .replace(/[_]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function inferMimeType(name) {
+    var ext = getFileExtension(name);
+    var map = {
+      pdf: 'application/pdf',
+      docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      xls: 'application/vnd.ms-excel',
+      doc: 'application/msword',
+      png: 'image/png',
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      webp: 'image/webp',
+      gif: 'image/gif',
+      txt: 'text/plain',
+      csv: 'text/csv',
+      zip: 'application/zip',
+      rar: 'application/vnd.rar',
+      mp3: 'audio/mpeg',
+      mp4: 'video/mp4'
+    };
+    return map[ext] || 'application/octet-stream';
+  }
+
+  function sanitizeFileName(name) {
+    var clean = String(name || 'file').replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, ' ').trim();
+    return clean || 'file';
+  }
+
+  function isPdfItem(item) {
+    return getFileExtension(item && item.name) === 'pdf';
+  }
+
+  function isDocxItem(item) {
+    return getFileExtension(item && item.name) === 'docx';
+  }
+
+  function isXlsxItem(item) {
+    return getFileExtension(item && item.name) === 'xlsx';
+  }
+
+  function isOfficeItem(item) {
+    return isDocxItem(item) || isXlsxItem(item);
+  }
+
+  function buildItem(raw, fallbackCategory) {
+    var category = raw.category || fallbackCategory || 'urgent';
+    var name = raw.name || 'ملف';
+    var key = raw.key || makeItemKey(category, name);
+    var downloaded = state.downloadedFiles[key];
+    var sharedChunkUrls = Array.isArray(raw.chunkUrls) ? raw.chunkUrls.slice() : [];
+    var isSharedUpload = !!raw.isSharedUpload || !!sharedChunkUrls.length;
+    return {
+      key: key,
+      category: category,
+      type: category,
+      name: name,
+      title: raw.title || titleFromName(name),
+      description: raw.description || '',
+      assetPath: raw.assetPath || null,
+      localPath: downloaded ? downloaded.localPath : (raw.localPath || null),
+      localNativeURL: downloaded ? downloaded.localNativeURL : (raw.localNativeURL || raw.localPath || null),
+      localInternalURL: downloaded ? downloaded.localInternalURL : (raw.localInternalURL || raw.localPath || null),
+      size: raw.size || 0,
+      timestamp: raw.timestamp || 0,
+      source: (downloaded || raw.localPath) ? 'local' : (raw.assetPath ? 'asset' : (isSharedUpload ? 'shared' : 'cloud')),
+      isFavorite: !!state.favorites[key],
+      rating: Number(state.ratings[key] || 0),
+      remoteFolder: raw.remoteFolder || null,
+      folderLabel: raw.folderLabel || getTabMetaByCategory(category).label,
+      extension: raw.extension || getFileExtension(name),
+      mimeType: raw.mimeType || inferMimeType(name),
+      createdAt: raw.createdAt || null,
+      createdBy: raw.createdBy || null,
+      chunkUrls: sharedChunkUrls,
+      isSharedUpload: isSharedUpload
+    };
+  }
+
+  function showOpenOptions(key) {
+    state.pendingOpenKey = key;
+    var item = findItem(key);
+    document.getElementById('openOptionsTitle').textContent = item ? item.title : 'الملف';
+    var subtitle = document.querySelector('#openOptionsModal .open-options-subtitle');
+    if (subtitle) {
+      subtitle.textContent = 'اختر طريقة الفتح: داخل التطبيق أو عبر تطبيق خارجي للملفات المدعومة (PDF / DOCX / XLSX).';
+    }
+    var internalBtn = document.getElementById('openInternalBtn');
+    var externalBtn = document.getElementById('openExternalBtn');
+    var allowInternal = !!item && supportsInternalPreview(item) && canOpenInternal();
+    var allowExternal = canOpenExternal();
+    if (!allowInternal && !allowExternal) {
+      alert('هذا النوع من الملفات يحتاج إلى صلاحية فتح خارجي أو يمكن تنزيله فقط على هذا الحساب.');
+      return;
+    }
+    if (internalBtn) internalBtn.style.display = allowInternal ? 'block' : 'none';
+    if (externalBtn) externalBtn.style.display = allowExternal ? 'block' : 'none';
+    document.getElementById('openOptionsModal').classList.add('active');
+  }
+
+  function closeViewer() {
+    document.getElementById('viewerModal').classList.remove('active');
+    var frame = document.getElementById('pdfFrame');
+    var officeViewer = document.getElementById('officeViewer');
+    if (frame) {
+      frame.src = '';
+      frame.style.display = 'block';
+    }
+    if (officeViewer) {
+      officeViewer.innerHTML = '';
+      officeViewer.style.display = 'none';
+      officeViewer.scrollTop = 0;
+    }
+    state.currentViewerItemKey = null;
+    state.currentViewerUrl = null;
+    state.currentViewerType = null;
+    updateViewerActionButtons();
+    if (state.objectUrl) {
+      try { URL.revokeObjectURL(state.objectUrl); } catch (e) {}
+      state.objectUrl = null;
+    }
+  }
+
+  function updateViewerActionButtons() {
+    var hasItem = !!state.currentViewerItemKey;
+    var downloadBtn = document.getElementById('viewerDownloadBtn');
+    var printBtn = document.getElementById('viewerPrintBtn');
+    var externalBtn = document.getElementById('viewerExternalBtn');
+    var reloadBtn = document.getElementById('viewerReloadBtn');
+    var currentItem = hasItem ? findItem(state.currentViewerItemKey) : null;
+    var printable = !!currentItem && isPdfItem(currentItem) && !!state.currentViewerUrl;
+
+    if (downloadBtn) {
+      var alreadyDownloaded = hasItem && !!state.downloadedFiles[state.currentViewerItemKey];
+      downloadBtn.disabled = !hasItem || !canDownload() || alreadyDownloaded;
+      downloadBtn.textContent = alreadyDownloaded ? '✅ تم التنزيل' : '📥 تنزيل';
+    }
+    if (printBtn) printBtn.disabled = !printable;
+    if (externalBtn) externalBtn.disabled = !hasItem || !canOpenExternal();
+    if (reloadBtn) reloadBtn.disabled = !state.currentViewerUrl && !hasItem;
+  }
+
+  function setViewerPanels(mode) {
+    var frame = document.getElementById('pdfFrame');
+    var officeViewer = document.getElementById('officeViewer');
+    if (frame) frame.style.display = mode === 'pdf' ? 'block' : 'none';
+    if (officeViewer) officeViewer.style.display = mode === 'office' ? 'block' : 'none';
+  }
+
+  function tunePdfViewer(frame) {
+    var attempts = 0;
+    function applyTuning() {
+      attempts += 1;
+      try {
+        var win = frame.contentWindow;
+        if (!win || !win.document) throw new Error('viewer not ready');
+        var doc = win.document;
+        var app = win.PDFViewerApplication;
+        var container = doc.getElementById('viewerContainer');
+        if (container) container.style.background = '#0f172a';
+        if (app && app.pdfViewer) {
+          try { app.pdfViewer.currentScaleValue = 'page-width'; } catch (e) {}
+          var secondaryOpen = doc.getElementById('openFile');
+          if (secondaryOpen) secondaryOpen.style.display = 'none';
+          return;
+        }
+      } catch (e) {}
+      if (attempts < 14) setTimeout(applyTuning, 250);
+    }
+    setTimeout(applyTuning, 200);
+  }
+
+  function openPdfViewerWithUrl(title, url, itemKey) {
+    document.getElementById('viewerTitle').textContent = title;
+    var subtitle = document.getElementById('viewerSubtitle');
+    if (subtitle) subtitle.textContent = 'عرض PDF داخلي واضح مع دعم الطباعة والتنزيل وإعادة التحميل.';
+    state.currentViewerItemKey = itemKey || null;
+    state.currentViewerUrl = url || null;
+    state.currentViewerType = 'pdf';
+    updateViewerActionButtons();
+    setViewerPanels('pdf');
+    var viewerUrl = 'lib/pdfjs/web/viewer.html?file=' + encodeURIComponent(url) + '#zoom=page-width';
+    var frame = document.getElementById('pdfFrame');
+    frame.onload = function() { tunePdfViewer(frame); };
+    frame.src = '';
+    setTimeout(function() { frame.src = viewerUrl; }, 50);
+    document.getElementById('viewerModal').classList.add('active');
+  }
+
+  function arrayBufferFromBlob(blob) {
+    if (!blob) return Promise.reject(new Error('blob missing'));
+    if (typeof blob.arrayBuffer === 'function') return blob.arrayBuffer();
+    return new Promise(function(resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function() { resolve(reader.result); };
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(blob);
+    });
+  }
+
+  function escapeOfficeHtml(text) {
+    return String(text == null ? '' : text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function buildOfficeViewerShell(title, bodyHtml) {
+    return '' +
+      '<div style="padding:20px;background:#f8fafc;min-height:100%;box-sizing:border-box;direction:rtl;text-align:right;">' +
+        '<div style="max-width:1100px;margin:0 auto;background:#fff;border-radius:18px;box-shadow:0 10px 35px rgba(15,23,42,.08);padding:24px;overflow:auto;">' +
+          '<div style="font-size:24px;font-weight:800;color:#0f172a;margin-bottom:18px;word-break:break-word;">' + escapeOfficeHtml(title) + '</div>' +
+          bodyHtml +
+        '</div>' +
+      '</div>';
+  }
+
+  function buildDocxEditorShell(title, bodyHtml) {
+    return '' +
+      '<style>' +
+        '.docx-editor-wrap{padding:16px;background:linear-gradient(180deg,#eef2ff 0%,#f8fafc 100%);min-height:100%;box-sizing:border-box;direction:rtl;text-align:right;}' +
+        '.docx-editor-shell{max-width:1240px;margin:0 auto;background:#fff;border-radius:22px;box-shadow:0 16px 40px rgba(15,23,42,.10);overflow:hidden;border:1px solid rgba(99,102,241,.08);}' +
+        '.docx-editor-head{padding:18px 22px;background:linear-gradient(90deg,#4f46e5 0%,#7c3aed 55%,#2563eb 100%);color:#fff;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;}' +
+        '.docx-editor-title{font-size:23px;font-weight:900;line-height:1.4;word-break:break-word;}' +
+        '.docx-editor-subtitle{font-size:13px;opacity:.96;margin-top:6px;line-height:1.8;}' +
+        '.docx-editor-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.14);padding:10px 14px;border-radius:999px;font-size:12px;font-weight:800;backdrop-filter:blur(8px);}' +
+        '.docx-editor-toolbar{display:flex;flex-wrap:wrap;gap:10px;padding:14px 16px;background:#f8fafc;border-bottom:1px solid #e2e8f0;position:sticky;top:0;z-index:3;}' +
+        '.docx-toolbar-group{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:8px 10px;box-shadow:0 4px 12px rgba(15,23,42,.04);}' +
+        '.docx-toolbar-label{font-size:12px;font-weight:800;color:#475569;margin-inline-end:2px;}' +
+        '.docx-toolbar-btn,.docx-toolbar-select,.docx-toolbar-color{height:38px;border-radius:12px;border:1px solid #cbd5e1;background:#fff;color:#0f172a;font-family:inherit;font-size:13px;font-weight:800;transition:all .2s ease;}' +
+        '.docx-toolbar-btn{padding:0 12px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;min-width:42px;}' +
+        '.docx-toolbar-btn:hover,.docx-toolbar-select:hover,.docx-toolbar-color:hover{border-color:#818cf8;box-shadow:0 0 0 3px rgba(99,102,241,.10);transform:translateY(-1px);}' +
+        '.docx-toolbar-btn.active{background:#eef2ff;border-color:#6366f1;color:#4338ca;box-shadow:0 0 0 3px rgba(99,102,241,.12);}' +
+        '.docx-toolbar-select{padding:0 10px;cursor:pointer;min-width:118px;}' +
+        '.docx-toolbar-color{width:44px;padding:4px;cursor:pointer;}' +
+        '.docx-editor-surface{min-height:calc(100vh - 330px);padding:28px 30px;background:#fff;outline:none;overflow:auto;line-height:1.95;color:#0f172a;font-size:17px;caret-color:#4f46e5;}' +
+        '.docx-editor-surface:focus{box-shadow:inset 0 0 0 2px rgba(99,102,241,.16);}' +
+        '.docx-editor-surface p{margin:0 0 1em;}' +
+        '.docx-editor-surface table{border-collapse:collapse;width:100%;margin:18px 0;}' +
+        '.docx-editor-surface table td,.docx-editor-surface table th{border:1px solid #cbd5e1;padding:10px;vertical-align:top;}' +
+        '.docx-editor-surface img{max-width:100%;height:auto;}' +
+        '.docx-editor-surface blockquote{margin:18px 0;padding:12px 18px;border-right:4px solid #818cf8;background:#f8fafc;border-radius:14px;color:#334155;}' +
+        '.docx-editor-footnote{padding:12px 18px;border-top:1px solid #e2e8f0;background:#f8fafc;color:#475569;font-size:12px;line-height:1.8;}' +
+        '@media (max-width: 768px){.docx-editor-head{padding:16px;}.docx-editor-toolbar{padding:12px;gap:8px;}.docx-toolbar-group{width:100%;}.docx-toolbar-select{flex:1 1 140px;}.docx-editor-surface{padding:18px 16px;min-height:calc(100vh - 360px);font-size:16px;}}' +
+      '</style>' +
+      '<div class="docx-editor-wrap">' +
+        '<div class="docx-editor-shell">' +
+          '<div class="docx-editor-head">' +
+            '<div>' +
+              '<div class="docx-editor-title">' + escapeOfficeHtml(title) + '</div>' +
+              '<div class="docx-editor-subtitle">واجهة داخلية محسّنة لملفات DOCX بأدوات شبيهة ببرامج التحرير المكتبي، بدون المساس بنظام المستخدمين أو الصلاحيات المركزية.</div>' +
+            '</div>' +
+            '<div class="docx-editor-badge">📝 محرر DOCX داخلي · 🔒 يعمل تحت نفس صلاحيات الفتح الداخلي</div>' +
+          '</div>' +
+          '<div class="docx-editor-toolbar" id="docxEditorToolbar">' +
+            '<div class="docx-toolbar-group">' +
+              '<span class="docx-toolbar-label">الخط</span>' +
+              '<select class="docx-toolbar-select" data-docx-control="fontName">' +
+                '<option value="Cairo">Cairo</option>' +
+                '<option value="Tajawal">Tajawal</option>' +
+                '<option value="Segoe UI">Segoe UI</option>' +
+                '<option value="Arial">Arial</option>' +
+                '<option value="Traditional Arabic">Traditional Arabic</option>' +
+                '<option value="Times New Roman">Times New Roman</option>' +
+              '</select>' +
+              '<select class="docx-toolbar-select" data-docx-control="fontSize">' +
+                '<option value="12">12</option>' +
+                '<option value="14" selected>14</option>' +
+                '<option value="16">16</option>' +
+                '<option value="18">18</option>' +
+                '<option value="24">24</option>' +
+                '<option value="32">32</option>' +
+              '</select>' +
+              '<select class="docx-toolbar-select" data-docx-control="formatBlock">' +
+                '<option value="P" selected>فقرة</option>' +
+                '<option value="H1">عنوان 1</option>' +
+                '<option value="H2">عنوان 2</option>' +
+                '<option value="H3">عنوان 3</option>' +
+                '<option value="BLOCKQUOTE">اقتباس</option>' +
+              '</select>' +
+            '</div>' +
+            '<div class="docx-toolbar-group">' +
+              '<button type="button" class="docx-toolbar-btn" data-docx-command="bold" title="عريض">B</button>' +
+              '<button type="button" class="docx-toolbar-btn" data-docx-command="italic" title="مائل">I</button>' +
+              '<button type="button" class="docx-toolbar-btn" data-docx-command="underline" title="تحته خط">U</button>' +
+              '<button type="button" class="docx-toolbar-btn" data-docx-command="strikeThrough" title="يتوسطه خط">S</button>' +
+              '<button type="button" class="docx-toolbar-btn" data-docx-command="removeFormat" title="مسح التنسيق">Tx</button>' +
+            '</div>' +
+            '<div class="docx-toolbar-group">' +
+              '<button type="button" class="docx-toolbar-btn" data-docx-command="justifyRight" title="محاذاة يمين">⟹</button>' +
+              '<button type="button" class="docx-toolbar-btn" data-docx-command="justifyCenter" title="توسيط">≡</button>' +
+              '<button type="button" class="docx-toolbar-btn" data-docx-command="justifyLeft" title="محاذاة يسار">⟸</button>' +
+              '<button type="button" class="docx-toolbar-btn" data-docx-command="insertUnorderedList" title="قائمة نقطية">• List</button>' +
+              '<button type="button" class="docx-toolbar-btn" data-docx-command="insertOrderedList" title="قائمة رقمية">1. List</button>' +
+            '</div>' +
+            '<div class="docx-toolbar-group">' +
+              '<span class="docx-toolbar-label">لون</span>' +
+              '<input class="docx-toolbar-color" type="color" value="#0f172a" data-docx-control="foreColor" title="لون الخط">' +
+              '<span class="docx-toolbar-label">تمييز</span>' +
+              '<input class="docx-toolbar-color" type="color" value="#fff59d" data-docx-control="hiliteColor" title="تمييز النص">' +
+            '</div>' +
+            '<div class="docx-toolbar-group">' +
+              '<button type="button" class="docx-toolbar-btn" data-docx-command="undo" title="تراجع">↶</button>' +
+              '<button type="button" class="docx-toolbar-btn" data-docx-command="redo" title="إعادة">↷</button>' +
+            '</div>' +
+          '</div>' +
+          '<div id="docxEditorSurface" class="docx-editor-surface" contenteditable="true" spellcheck="false">' + bodyHtml + '</div>' +
+          '<div class="docx-editor-footnote">مهم: هذه الإضافة خاصة بعرض وتحرير محتوى DOCX داخل التطبيق فقط. لم يتم تعديل منطق إنشاء المستخدمين أو مزامنة الصلاحيات المركزية أو أذونات الفتح والتنزيل الحالية.</div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function saveDocxSelection() {
+    var editor = document.getElementById('docxEditorSurface');
+    if (!editor) return;
+    var selection = window.getSelection ? window.getSelection() : null;
+    if (!selection || !selection.rangeCount) return;
+    var range = selection.getRangeAt(0);
+    if (!editor.contains(range.commonAncestorContainer)) return;
+    state.docxSelectionRange = range.cloneRange();
+  }
+
+  function restoreDocxSelection() {
+    var editor = document.getElementById('docxEditorSurface');
+    if (!editor) return;
+    editor.focus();
+    var selection = window.getSelection ? window.getSelection() : null;
+    if (!selection) return;
+    selection.removeAllRanges();
+    if (state.docxSelectionRange) {
+      try {
+        selection.addRange(state.docxSelectionRange);
+        return;
+      } catch (e) {}
+    }
+    var range = document.createRange();
+    range.selectNodeContents(editor);
+    range.collapse(false);
+    selection.addRange(range);
+  }
+
+  function mapDocxFontSizeToExec(value) {
+    var map = {
+      '10': '2',
+      '12': '3',
+      '14': '4',
+      '16': '4',
+      '18': '5',
+      '24': '6',
+      '32': '7'
+    };
+    return map[String(value || '14')] || '4';
+  }
+
+  function normalizeDocxFontTags(editor) {
+    if (!editor) return;
+    Array.prototype.slice.call(editor.querySelectorAll('font[size]')).forEach(function(node) {
+      var size = String(node.getAttribute('size') || '4');
+      var pxMap = {
+        '1': '10px',
+        '2': '12px',
+        '3': '14px',
+        '4': '16px',
+        '5': '18px',
+        '6': '24px',
+        '7': '32px'
+      };
+      node.style.fontSize = pxMap[size] || '16px';
+      node.removeAttribute('size');
+    });
+  }
+
+  function refreshDocxToolbarState() {
+    var officeViewer = document.getElementById('officeViewer');
+    if (!officeViewer || state.currentViewerType !== 'docx') return;
+    Array.prototype.slice.call(officeViewer.querySelectorAll('[data-docx-command]')).forEach(function(button) {
+      var cmd = button.getAttribute('data-docx-command');
+      if (!cmd) return;
+      var active = false;
+      try {
+        active = document.queryCommandState ? !!document.queryCommandState(cmd) : false;
+      } catch (e) {
+        active = false;
+      }
+      button.classList.toggle('active', active);
+    });
+  }
+
+  function applyDocxEditorAction(control) {
+    var editor = document.getElementById('docxEditorSurface');
+    if (!editor) return;
+    restoreDocxSelection();
+    try { document.execCommand('styleWithCSS', false, true); } catch (e) {}
+
+    var command = control.getAttribute('data-docx-command');
+    var logicalControl = control.getAttribute('data-docx-control');
+    try {
+      if (command) {
+        document.execCommand(command, false, null);
+      } else if (logicalControl === 'fontName') {
+        document.execCommand('fontName', false, control.value || 'Cairo');
+      } else if (logicalControl === 'fontSize') {
+        document.execCommand('fontSize', false, mapDocxFontSizeToExec(control.value));
+        normalizeDocxFontTags(editor);
+      } else if (logicalControl === 'foreColor') {
+        document.execCommand('foreColor', false, control.value || '#0f172a');
+      } else if (logicalControl === 'hiliteColor') {
+        document.execCommand('hiliteColor', false, control.value || '#fff59d');
+      } else if (logicalControl === 'formatBlock') {
+        document.execCommand('formatBlock', false, control.value || 'P');
+      }
+    } catch (e) {
+      console.error('DOCX editor action failed:', e);
+    }
+    saveDocxSelection();
+    refreshDocxToolbarState();
+  }
+
+  function initDocxEditor() {
+    var officeViewer = document.getElementById('officeViewer');
+    var editor = document.getElementById('docxEditorSurface');
+    if (!officeViewer || !editor) return;
+
+    Array.prototype.slice.call(officeViewer.querySelectorAll('[data-docx-command], [data-docx-control]')).forEach(function(control) {
+      control.addEventListener('mousedown', function(evt) {
+        evt.preventDefault();
+      });
+      var eventName = control.tagName === 'SELECT' || control.type === 'color' ? 'change' : 'click';
+      control.addEventListener(eventName, function() {
+        applyDocxEditorAction(control);
+      });
+    });
+
+    ['mouseup', 'keyup', 'touchend', 'input'].forEach(function(name) {
+      editor.addEventListener(name, function() {
+        saveDocxSelection();
+        normalizeDocxFontTags(editor);
+        refreshDocxToolbarState();
+      });
+    });
+
+    setTimeout(function() {
+      editor.focus();
+      saveDocxSelection();
+      refreshDocxToolbarState();
+    }, 50);
+  }
+
+  function renderDocxBlob(item, blob) {
+    if (!window.mammoth) return Promise.reject(new Error('Mammoth library unavailable'));
+    return arrayBufferFromBlob(blob).then(function(arrayBuffer) {
+      return window.mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
+    }).then(function(result) {
+      var officeViewer = document.getElementById('officeViewer');
+      officeViewer.innerHTML = buildDocxEditorShell(item.title, '<div class="docx-rendered">' + result.value + '</div>');
+      document.getElementById('viewerTitle').textContent = item.title;
+      var subtitle = document.getElementById('viewerSubtitle');
+      if (subtitle) subtitle.textContent = 'محرر DOCX داخلي محسّن مع أدوات تنسيق شبيهة ببرامج مايكروسوفت، مع الإبقاء على الفتح الخارجي والتنزيل والصلاحيات المركزية كما هي.';
+      state.currentViewerItemKey = item.key || null;
+      state.currentViewerUrl = 'docx:' + (item.key || item.title || Date.now());
+      state.currentViewerType = 'docx';
+      setViewerPanels('office');
+      updateViewerActionButtons();
+      document.getElementById('viewerModal').classList.add('active');
+      initDocxEditor();
+    });
+  }
+
+  function renderWorkbookToHtml(workbook) {
+    var names = workbook.SheetNames || [];
+    if (!names.length) return '<div style="color:#475569;font-size:16px;">لا توجد أوراق قابلة للعرض داخل الملف.</div>';
+    return names.map(function(sheetName, index) {
+      var sheet = workbook.Sheets[sheetName];
+      var tableHtml = window.XLSX.utils.sheet_to_html(sheet, { editable: false, id: 'sheet_' + index, header: '', footer: '' });
+      return '' +
+        '<section style="margin-bottom:28px;">' +
+          '<div style="display:inline-flex;align-items:center;gap:8px;background:#e0f2fe;color:#075985;padding:8px 14px;border-radius:999px;font-weight:800;margin-bottom:12px;">📊 ' + escapeOfficeHtml(sheetName) + '</div>' +
+          '<div style="overflow:auto;border:1px solid #e2e8f0;border-radius:14px;padding:12px;background:#fff;">' + tableHtml + '</div>' +
+        '</section>';
+    }).join('');
+  }
+
+  function renderXlsxBlob(item, blob) {
+    if (!window.XLSX) return Promise.reject(new Error('SheetJS library unavailable'));
+    return arrayBufferFromBlob(blob).then(function(arrayBuffer) {
+      var workbook = window.XLSX.read(arrayBuffer, { type: 'array' });
+      var officeViewer = document.getElementById('officeViewer');
+      officeViewer.innerHTML = buildOfficeViewerShell(item.title, renderWorkbookToHtml(workbook));
+      document.getElementById('viewerTitle').textContent = item.title;
+      var subtitle = document.getElementById('viewerSubtitle');
+      if (subtitle) subtitle.textContent = 'عرض داخلي لملف XLSX مع الحفاظ على التنزيل والفتح الخارجي.';
+      state.currentViewerItemKey = item.key || null;
+      state.currentViewerUrl = 'xlsx:' + (item.key || item.title || Date.now());
+      state.currentViewerType = 'xlsx';
+      setViewerPanels('office');
+      updateViewerActionButtons();
+      document.getElementById('viewerModal').classList.add('active');
+    });
+  }
+
+  function openBlobInsideViewer(item, blob) {
+    if (isPdfItem(item)) {
+      if (state.objectUrl) {
+        try { URL.revokeObjectURL(state.objectUrl); } catch (e) {}
+        state.objectUrl = null;
+      }
+      state.objectUrl = URL.createObjectURL(blob);
+      openPdfViewerWithUrl(item.title, state.objectUrl, item.key);
+      return Promise.resolve();
+    }
+    if (isDocxItem(item)) return renderDocxBlob(item, blob);
+    if (isXlsxItem(item)) return renderXlsxBlob(item, blob);
+    return Promise.reject(new Error('Unsupported file type'));
+  }
+
+  function readLocalEntryAsBlob(entry) {
+    return new Promise(function(resolve, reject) {
+      if (!entry || typeof entry.file !== 'function') {
+        reject(new Error('Local file entry is unavailable'));
+        return;
+      }
+      entry.file(resolve, reject);
+    });
+  }
+
+  function openInternalLocal(item) {
+    if (!state.deviceReady || !window.resolveLocalFileSystemURL) {
+      if (item.assetPath && isPdfItem(item)) {
+        openPdfViewerWithUrl(item.title, assetViewerUrl(item.assetPath), item.key);
+        return;
+      }
+      if (item.assetPath) {
+        showOverlay('جاري تجهيز الملف الداخلي...', 45);
+        fetch(assetViewerUrl(item.assetPath)).then(function(resp) {
+          if (!resp.ok) throw new Error('Asset fetch failed');
+          return resp.blob();
+        }).then(function(blob) {
+          hideOverlay();
+          return openBlobInsideViewer(item, blob);
+        }).catch(function() {
+          hideOverlay();
+          alert('تعذر العثور على الملف المحلي.');
+        });
+        return;
+      }
+      alert('الفتح المحلي متاح على الهاتف فقط.');
+      return;
+    }
+    showOverlay('جاري فتح الملف...', 50);
+    resolveFirstLocalEntry([item.localInternalURL, item.localPath, item.localNativeURL]).then(function(entry) {
+      if (isPdfItem(item)) {
+        hideOverlay();
+        var finalUrl = entry.toInternalURL ? entry.toInternalURL() : entry.toURL();
+        openPdfViewerWithUrl(item.title, finalUrl, item.key);
+        return;
+      }
+      return readLocalEntryAsBlob(entry).then(function(fileBlob) {
+        hideOverlay();
+        return openBlobInsideViewer(item, fileBlob);
+      });
+    }).catch(function() {
+      hideOverlay();
+      if (item.assetPath && isPdfItem(item)) openPdfViewerWithUrl(item.title, assetViewerUrl(item.assetPath), item.key);
+      else alert('تعذر العثور على الملف المحلي.');
+    });
+  }
+
+  function openExternalLocal(url, item) {
+    var mimeType = (item && item.mimeType) || inferMimeType(url || '');
+    if (window.cordova && cordova.plugins && cordova.plugins.fileOpener2) {
+      cordova.plugins.fileOpener2.showOpenWithDialog(url, mimeType, {
+        error: function (e) {
+          console.error('FileOpener2 error:', e);
+          alert('تعذر الفتح الخارجي. تأكد من وجود تطبيق مناسب على جهازك لقراءة هذا النوع من الملفات.');
+        },
+        success: function () {}
+      });
+    } else {
+      alert('ميزة الفتح الخارجي متاحة على الهاتف فقط.');
+    }
+  }
+
+  function openExternalAsset(item) {
+    if (!window.cordova || !cordova.file) {
+      if (item.assetPath && isPdfItem(item)) {
+        openPdfViewerWithUrl(item.title, assetViewerUrl(item.assetPath), item.key);
+      } else {
+        alert('الفتح الخارجي متاح على الهاتف فقط.');
+      }
+      return;
+    }
+    showOverlay('جاري تجهيز الملف للفتح الخارجي...', 30);
+
+    var cleanAssetPath = item.assetPath.replace(/^\/+/, '');
+    var sourceUrl = cordova.file.applicationDirectory + 'www/' + cleanAssetPath;
+    var targetDir = cordova.file.externalCacheDirectory || cordova.file.cacheDirectory || cordova.file.externalDataDirectory || cordova.file.dataDirectory;
+    var targetName = sanitizeFileName(item.name);
+
+    window.resolveLocalFileSystemURL(sourceUrl, function (fileEntry) {
+      window.resolveLocalFileSystemURL(targetDir, function (dirEntry) {
+        fileEntry.copyTo(dirEntry, targetName, function (newFileEntry) {
+          hideOverlay();
+          var finalUrl = newFileEntry.nativeURL || newFileEntry.toURL();
+          if (finalUrl.indexOf('file://') !== 0 && finalUrl.indexOf('/') === 0) finalUrl = 'file://' + finalUrl;
+          openExternalLocal(finalUrl, item);
+        }, function (err) {
+          hideOverlay();
+          console.error('copyTo failed:', err);
+          if (item.assetPath && isPdfItem(item)) openPdfViewerWithUrl(item.title, assetViewerUrl(item.assetPath), item.key);
+          else alert('تعذر تجهيز الملف الخارجي.');
+        });
+      }, function (err) {
+        hideOverlay();
+        console.error('resolveLocalFileSystemURL targetDir failed:', err);
+        alert('تعذر الوصول لمجلد التخزين.');
+      });
+    }, function (err) {
+      hideOverlay();
+      console.error('resolveLocalFileSystemURL sourceUrl failed:', sourceUrl, err);
+      if (item.assetPath && isPdfItem(item)) openPdfViewerWithUrl(item.title, assetViewerUrl(item.assetPath), item.key);
+      else alert('تعذر العثور على الملف الأصلي.');
+    });
+  }
+
+  function listRemoteCategory(category) {
+    if (!window.mega || !window.mega.File || !FOLDERS[category]) {
+      return Promise.reject(new Error('MEGA library unavailable'));
+    }
+    var folder = window.mega.File.fromURL(FOLDERS[category]);
+    return folder.loadAttributes().then(function () {
+      return (folder.children || []).filter(function (file) {
+        return !file.directory && /\.(pdf|docx|xlsx)$/i.test(file.name || '');
+      });
+    });
+  }
+
+  function bufferToBlob(item, buffer) {
+    var mimeType = (item && item.mimeType) || inferMimeType(item && item.name);
+    if (buffer instanceof Blob) return buffer;
+    if (buffer instanceof ArrayBuffer) return new Blob([buffer], { type: mimeType });
+    if (buffer && buffer.buffer) {
+      var view = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer.buffer, buffer.byteOffset || 0, buffer.byteLength || buffer.length || 0);
+      return new Blob([view], { type: mimeType });
+    }
+    return new Blob([buffer], { type: mimeType });
+  }
+
+  function downloadRemoteBlob(item) {
+    if (item && item.isSharedUpload && item.chunkUrls && item.chunkUrls.length) {
+      return downloadSharedBlob(item);
+    }
+    return fetchRemoteFile(item).then(function (remoteFile) {
+      return remoteFile.downloadBuffer({ forceHttps: true });
+    }).then(function(buffer) {
+      return bufferToBlob(item, buffer);
+    });
+  }
+
+  function openRemoteInternal(item) {
+    showOverlay('جاري تحميل الملف من السحابة...', 35);
+    downloadRemoteBlob(item).then(function (blob) {
+      hideOverlay();
+      return openBlobInsideViewer(item, blob);
+    }).catch(function (err) {
+      hideOverlay();
+      console.error('Cloud open failed:', err);
+      alert('تعذر تحميل الملف من السحابة. تأكد من الاتصال بالإنترنت ثم حاول مرة أخرى.');
+    });
+  }
+
+  function openRemoteExternal(item) {
+    if (!state.deviceReady || !window.cordova || !cordova.file) {
+      openRemoteInternal(item);
+      return;
+    }
+    showOverlay('جاري تحميل الملف من السحابة للفتح الخارجي...', 35);
+    downloadRemoteBlob(item).then(function (blob) {
+      return writeBlobToTempCache(sanitizeFileName(item.name), blob);
+    }).then(function (saved) {
+      hideOverlay();
+      item.localPath = saved.localPath;
+      item.localNativeURL = saved.localNativeURL;
+      item.localInternalURL = saved.localInternalURL;
+      openExternalLocal(saved.localNativeURL || saved.localPath, item);
+    }).catch(function (err) {
+      hideOverlay();
+      console.error('Cloud external open failed:', err);
+      alert('تعذر تجهيز الملف من السحابة للفتح الخارجي.');
+    });
+  }
+
+  function printCurrentPdf() {
+    var currentItem = state.currentViewerItemKey ? findItem(state.currentViewerItemKey) : null;
+    if (!currentItem || !isPdfItem(currentItem)) {
+      alert('الطباعة الداخلية متاحة حالياً لملفات PDF فقط. يمكنك استخدام الفتح الخارجي لباقي الملفات.');
+      return;
+    }
+    var frame = document.getElementById('pdfFrame');
+    if (!frame || !frame.contentWindow) {
+      alert('تعذر الوصول إلى مستند الطباعة حالياً.');
+      return;
+    }
+    try {
+      var win = frame.contentWindow;
+      if (win.PDFViewerApplication && win.PDFViewerApplication.eventBus) {
+        win.PDFViewerApplication.eventBus.dispatch('print');
+        return;
+      }
+      if (typeof win.print === 'function') {
+        win.focus();
+        win.print();
+        return;
+      }
+    } catch (e) {}
+
+    if (state.currentViewerItemKey && canOpenExternal()) {
+      alert('سيتم فتح الملف في تطبيق خارجي لتكملة الطباعة من خلاله.');
+      prepareAndOpen(state.currentViewerItemKey, 'external');
+      return;
+    }
+    alert('تعذر بدء الطباعة على هذا الجهاز حالياً.');
+  }
+
+  window.switchTab = switchTab;
+  window.setFilter = setFilter;
+  window.toggleDropdown = toggleDropdown;
+  window.toggleFavorite = toggleFavorite;
+  window.saveRating = saveRating;
+  window.showOpenOptions = showOpenOptions;
+  window.closeOpenOptions = closeOpenOptions;
+  window.openInternalFromOptions = openInternalFromOptions;
+  window.openExternalFromOptions = openExternalFromOptions;
+  window.closeViewer = closeViewer;
+  window.downloadAndSave = downloadAndSave;
+  window.downloadCurrentViewedFile = downloadCurrentViewedFile;
+  window.reloadCurrentViewer = reloadCurrentViewer;
+  window.openCurrentViewedExternally = openCurrentViewedExternally;
+  window.printCurrentPdf = printCurrentPdf;
+  window.logout = logout;
+  window.handleManualPermissionSync = handleManualPermissionSync;
+  window.showAdminPanel = showAdminPanel;
+  window.closeAdminPanel = closeAdminPanel;
+  window.createUser = createUser;
+  window.deleteUser = deleteUser;
+  window.deleteEditingUser = deleteEditingUser;
+  window.openUserEditor = openUserEditor;
+  window.closeUserEditor = closeUserEditor;
+  window.saveUserEdits = saveUserEdits;
+  window.toggleUserSuspension = toggleUserSuspension;
+  window.applyTabPermissions = applyTabPermissions;
+  window.showSuspendedOverlay = showSuspendedOverlay;
+  window.hideSuspendedOverlay = hideSuspendedOverlay;
+  window.triggerTabFilePicker = triggerTabFilePicker;
+  window.promptRenameItem = promptRenameItem;
+  window.deleteCentralFile = deleteCentralFile;
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
