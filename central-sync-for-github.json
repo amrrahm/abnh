@@ -1,12 +1,29 @@
 {
   "schemaVersion": 5,
-  "updatedAt": "2026-04-08T12:50:00Z",
+  "updatedAt": "2026-05-26T12:50:00Z",
   "users": {
     "770428514": {
       "username": "770428514",
       "password": "8514",
       "displayName": "المدير",
       "isAdmin": true,
+      "isSuspended": false,
+      "canOpenInternal": true,
+      "canOpenExternal": true,
+      "canDownload": true,
+      "canViewTab1": true,
+      "canViewTab2": true,
+      "canViewTab3": true,
+      "canViewTab4": true,
+      "canViewTab5": true,
+      "canViewTab6": true,
+      "canViewTab7": true
+    },
+    "user123": {
+      "username": "user123",
+      "password": "509228",
+      "displayName": "user123",
+      "isAdmin": false,
       "isSuspended": false,
       "canOpenInternal": true,
       "canOpenExternal": true,
